@@ -40,7 +40,7 @@ export const analyzeTicketController = async (req, res) => {
       parsedResponse,
       usedFallback,
       provider: "gemini",
-      model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
     });
   } catch (logError) {
     console.error("Failed to save AI log:", logError.message);

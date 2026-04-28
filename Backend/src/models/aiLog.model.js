@@ -80,7 +80,7 @@ const aiLogSchema = new mongoose.Schema(
     },
     model: {
       type: String,
-      default: "gemini-1.5-flash",
+      default: "gemini-2.5-flash",
       trim: true,
     },
   },
