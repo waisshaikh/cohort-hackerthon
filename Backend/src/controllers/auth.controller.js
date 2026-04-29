@@ -3,6 +3,14 @@ import jwt from "jsonwebtoken";
 import userModel from "../models/user.model.js";
 import { sendEmail } from "../services/mail.service.js";
 
+const getJwtSecret = () => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+
+  return process.env.JWT_SECRET;
+};
+
 export async function register(req, res) {
   const { username, email, password } = req.body;
 
@@ -22,7 +30,7 @@ export async function register(req, res) {
 
   const emailVerificationToken = jwt.sign(
     { email: user.email },
-    process.env.JWT_SECRET,
+    getJwtSecret(),
   );
 
   await sendEmail({
@@ -80,7 +88,7 @@ export async function login(req, res) {
       id: user._id,
       username: user.username,
     },
-    process.env.JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: "7d" },
   );
 
@@ -120,7 +128,7 @@ export async function verifyEmail(req, res) {
   const { token } = req.query;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, getJwtSecret());
 
     const user = await userModel.findOne({ email: decoded.email });
 
