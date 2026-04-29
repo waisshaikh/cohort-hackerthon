@@ -1,6 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 
+<<<<<<< HEAD
 import dotenv from "dotenv";
 
 import app from "./src/app.js";
@@ -11,6 +12,13 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 
+=======
+dotenv.config();
+
+const app = require("./src/app");
+const connectDB = require("./src/config/db");
+
+>>>>>>> 6ae7f9d8a3431a9b798a651f7eb76a80986738fe
 const PORT = process.env.PORT || 5000;
 const isProduction = process.env.NODE_ENV === "production";
 
