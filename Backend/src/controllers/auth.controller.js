@@ -1,11 +1,9 @@
-const userModel = require("../models/user.model");
-const jwt = require("jsonwebtoken");
-const { sendEmail } = require("../services/mail.service");
+import jwt from "jsonwebtoken";
 
-/**
- * Register
- */
-async function register(req, res) {
+import userModel from "../models/user.model.js";
+import { sendEmail } from "../services/mail.service.js";
+
+export async function register(req, res) {
   const { username, email, password } = req.body;
 
   const isUserAlreadyExists = await userModel.findOne({
@@ -49,10 +47,7 @@ async function register(req, res) {
   });
 }
 
-/**
- * Login
- */
-async function login(req, res) {
+export async function login(req, res) {
   const { email, password } = req.body;
 
   const user = await userModel.findOne({ email });
@@ -102,10 +97,7 @@ async function login(req, res) {
   });
 }
 
-/**
- * Get Me
- */
-async function getMe(req, res) {
+export async function getMe(req, res) {
   const userId = req.user.id;
 
   const user = await userModel.findById(userId).select("-password");
@@ -124,10 +116,7 @@ async function getMe(req, res) {
   });
 }
 
-/**
- * Verify Email
- */
-async function verifyEmail(req, res) {
+export async function verifyEmail(req, res) {
   const { token } = req.query;
 
   try {
@@ -158,7 +147,7 @@ async function verifyEmail(req, res) {
   }
 }
 
-module.exports = {
+export default {
   register,
   login,
   getMe,
