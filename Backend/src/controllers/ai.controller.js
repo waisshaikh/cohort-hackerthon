@@ -48,7 +48,3 @@ export const analyzeTicketController = async (req, res) => {
 
   return res.status(200).json(parsedResponse);
 };
-
-export default {
-  analyzeTicketController,
-};
