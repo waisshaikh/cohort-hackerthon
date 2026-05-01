@@ -36,6 +36,7 @@ const connectDB = async () => {
       const connection = await mongoose.connect(mongoUri, {
         serverSelectionTimeoutMS: 5000,
       });
+      globalThis.__mongooseConnected = true;
       console.log(`MongoDB connected: ${connection.connection.host}`);
       return true;
     } catch (error) {
@@ -54,6 +55,7 @@ const connectDB = async () => {
     }
   }
 
+  globalThis.__mongooseConnected = false;
   return false;
 };
 

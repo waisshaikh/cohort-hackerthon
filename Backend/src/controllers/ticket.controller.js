@@ -11,6 +11,13 @@ import {
   parseAiAnalysisResponse,
 } from "../services/responseParser.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import {
+  isMongoConnected,
+  makeId,
+  memoryStore,
+  publicUser,
+  saveMemoryStore,
+} from "../utils/memoryStore.js";
 
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
@@ -18,6 +25,28 @@ const canAccessTicket = (user, ticket) => {
   if (["admin", "agent", "superadmin"].includes(user.role)) return true;
   return String(ticket.customer) === String(user.id);
 };
+
+const getMemoryUser = (userId) =>
+  memoryStore.users.find((user) => user.id === String(userId));
+
+const decorateMemoryTicket = (ticket) => ({
+  ...ticket,
+  _id: ticket.id,
+  customer: getMemoryUser(ticket.customer)
+    ? publicUser(getMemoryUser(ticket.customer))
+    : ticket.customer,
+  assignedTo: ticket.assignedTo && getMemoryUser(ticket.assignedTo)
+    ? publicUser(getMemoryUser(ticket.assignedTo))
+    : ticket.assignedTo,
+});
+
+const decorateMemoryMessage = (message) => ({
+  ...message,
+  _id: message.id,
+  author: getMemoryUser(message.author)
+    ? publicUser(getMemoryUser(message.author))
+    : message.author,
+});
 
 const analyzeTicketMessage = async (message, tenant, ticket = null) => {
   const prompt = buildAnalyzeTicketPrompt(message);
@@ -62,6 +91,51 @@ export const createTicket = asyncHandler(async (req, res) => {
     });
   }
 
+  if (!isMongoConnected()) {
+    const ai = {
+      ...buildFallbackAnalysis(description),
+      usedFallback: true,
+    };
+    const now = new Date();
+    const ticket = {
+      id: makeId(),
+      _id: null,
+      tenant: req.user.tenant,
+      title,
+      description,
+      channel,
+      customer: req.user.id,
+      assignedTo: null,
+      status: "open",
+      priority: ai.priority,
+      category: ai.category,
+      department: ai.recommendedDepartment,
+      ai,
+      createdAt: now,
+      updatedAt: now,
+      resolvedAt: null,
+    };
+    const message = {
+      id: makeId(),
+      tenant: req.user.tenant,
+      ticket: ticket.id,
+      author: req.user.id,
+      body: description,
+      visibility: "public",
+      createdAt: now,
+    };
+
+    memoryStore.tickets.unshift(ticket);
+    memoryStore.messages.push(message);
+    saveMemoryStore();
+
+    return res.status(201).json({
+      success: true,
+      message: "Ticket created and analyzed",
+      ticket: decorateMemoryTicket(ticket),
+    });
+  }
+
   const ai = await analyzeTicketMessage(description, req.user.tenant);
 
   const ticket = await Ticket.create({
@@ -103,6 +177,30 @@ export const createTicket = asyncHandler(async (req, res) => {
 
 export const listTickets = asyncHandler(async (req, res) => {
   const { status, priority, assignedTo, q } = req.query;
+
+  if (!isMongoConnected()) {
+    const query = String(q || "").toLowerCase();
+    const tickets = memoryStore.tickets
+      .filter((ticket) => ticket.tenant === req.user.tenant)
+      .filter((ticket) => req.user.role === "customer" ? ticket.customer === req.user.id : true)
+      .filter((ticket) => status ? ticket.status === status : true)
+      .filter((ticket) => priority ? ticket.priority === priority : true)
+      .filter((ticket) => assignedTo ? ticket.assignedTo === assignedTo : true)
+      .filter((ticket) =>
+        query
+          ? `${ticket.title} ${ticket.description}`.toLowerCase().includes(query)
+          : true,
+      )
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 100)
+      .map(decorateMemoryTicket);
+
+    return res.status(200).json({
+      success: true,
+      tickets,
+    });
+  }
+
   const filter = { tenant: req.user.tenant };
 
   if (req.user.role === "customer") {
@@ -131,6 +229,31 @@ export const listTickets = asyncHandler(async (req, res) => {
 });
 
 export const getTicket = asyncHandler(async (req, res) => {
+  if (!isMongoConnected()) {
+    const ticket = memoryStore.tickets.find(
+      (item) => item.id === req.params.id && item.tenant === req.user.tenant,
+    );
+
+    if (!ticket || !canAccessTicket(req.user, ticket)) {
+      return res.status(404).json({
+        success: false,
+        message: "Ticket not found",
+      });
+    }
+
+    const messages = memoryStore.messages
+      .filter((message) => message.ticket === ticket.id && message.tenant === req.user.tenant)
+      .filter((message) => req.user.role === "customer" ? message.visibility === "public" : true)
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      .map(decorateMemoryMessage);
+
+    return res.status(200).json({
+      success: true,
+      ticket: decorateMemoryTicket(ticket),
+      messages,
+    });
+  }
+
   if (!isObjectId(req.params.id)) {
     return res.status(400).json({ success: false, message: "Invalid ticket id" });
   }
@@ -183,6 +306,25 @@ export const updateTicket = asyncHandler(async (req, res) => {
     updates.resolvedAt = new Date();
   }
 
+  if (!isMongoConnected()) {
+    const ticket = memoryStore.tickets.find(
+      (item) => item.id === req.params.id && item.tenant === req.user.tenant,
+    );
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    Object.assign(ticket, updates, { updatedAt: new Date() });
+    saveMemoryStore();
+
+    return res.status(200).json({
+      success: true,
+      message: "Ticket updated",
+      ticket: decorateMemoryTicket(ticket),
+    });
+  }
+
   const ticket = await Ticket.findOneAndUpdate(
     { _id: req.params.id, tenant: req.user.tenant },
     updates,
@@ -202,6 +344,41 @@ export const updateTicket = asyncHandler(async (req, res) => {
 
 export const assignTicket = asyncHandler(async (req, res) => {
   const { assignedTo } = req.body;
+
+  if (!isMongoConnected()) {
+    const agent = memoryStore.users.find(
+      (user) =>
+        user.id === assignedTo &&
+        user.tenant === req.user.tenant &&
+        ["admin", "agent"].includes(user.role),
+    );
+
+    if (!agent) {
+      return res.status(404).json({
+        success: false,
+        message: "Agent not found in this tenant",
+      });
+    }
+
+    const ticket = memoryStore.tickets.find(
+      (item) => item.id === req.params.id && item.tenant === req.user.tenant,
+    );
+
+    if (!ticket) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    ticket.assignedTo = assignedTo;
+    ticket.status = "pending";
+    ticket.updatedAt = new Date();
+    saveMemoryStore();
+
+    return res.status(200).json({
+      success: true,
+      message: "Ticket assigned",
+      ticket: decorateMemoryTicket(ticket),
+    });
+  }
 
   if (!isObjectId(assignedTo)) {
     return res.status(400).json({ success: false, message: "Invalid agent id" });
@@ -244,6 +421,37 @@ export const addMessage = asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, message: "body is required" });
   }
 
+  if (!isMongoConnected()) {
+    const ticket = memoryStore.tickets.find(
+      (item) => item.id === req.params.id && item.tenant === req.user.tenant,
+    );
+
+    if (!ticket || !canAccessTicket(req.user, ticket)) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    const safeVisibility =
+      visibility === "internal" && req.user.role !== "customer" ? "internal" : "public";
+    const message = {
+      id: makeId(),
+      tenant: req.user.tenant,
+      ticket: ticket.id,
+      author: req.user.id,
+      body,
+      visibility: safeVisibility,
+      createdAt: new Date(),
+    };
+
+    memoryStore.messages.push(message);
+    saveMemoryStore();
+
+    return res.status(201).json({
+      success: true,
+      message: "Message added",
+      data: decorateMemoryMessage(message),
+    });
+  }
+
   const ticket = await Ticket.findOne({
     _id: req.params.id,
     tenant: req.user.tenant,
@@ -272,6 +480,33 @@ export const addMessage = asyncHandler(async (req, res) => {
 });
 
 export const suggestReply = asyncHandler(async (req, res) => {
+  if (!isMongoConnected()) {
+    const ticket = memoryStore.tickets.find(
+      (item) => item.id === req.params.id && item.tenant === req.user.tenant,
+    );
+
+    if (!ticket || !canAccessTicket(req.user, ticket)) {
+      return res.status(404).json({ success: false, message: "Ticket not found" });
+    }
+
+    const ai = {
+      ...buildFallbackAnalysis(ticket.description),
+      usedFallback: true,
+    };
+
+    ticket.ai = ai;
+    ticket.priority = ai.priority;
+    ticket.category = ai.category;
+    ticket.department = ai.recommendedDepartment;
+    ticket.updatedAt = new Date();
+    saveMemoryStore();
+
+    return res.status(200).json({
+      success: true,
+      ai,
+    });
+  }
+
   const ticket = await Ticket.findOne({
     _id: req.params.id,
     tenant: req.user.tenant,

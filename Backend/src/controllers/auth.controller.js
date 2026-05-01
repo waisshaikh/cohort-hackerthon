@@ -1,8 +1,17 @@
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
 import Tenant from "../models/tenant.model.js";
 import userModel from "../models/user.model.js";
 import { sendEmail } from "../services/mail.service.js";
+import {
+  getTenant,
+  isMongoConnected,
+  makeId,
+  memoryStore,
+  publicUser,
+  saveMemoryStore,
+} from "../utils/memoryStore.js";
 import { uniqueSlug } from "../utils/slug.js";
 
 const getJwtSecret = () => {
@@ -15,6 +24,53 @@ const getJwtSecret = () => {
 
 export async function register(req, res) {
   const { username, email, password, tenantName, role = "admin" } = req.body;
+
+  if (!isMongoConnected()) {
+    const existingUser = memoryStore.users.find(
+      (user) => user.email === email.toLowerCase() || user.username === username,
+    );
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User with this email or username already exists",
+        success: false,
+        err: "User already exists",
+      });
+    }
+
+    const tenant = {
+      id: makeId(),
+      _id: null,
+      name: tenantName || `${username}'s Workspace`,
+      slug: uniqueSlug(tenantName || username),
+      plan: "starter",
+      status: "active",
+      settings: {},
+    };
+    const user = {
+      id: makeId(),
+      username,
+      email: email.toLowerCase(),
+      password: await bcrypt.hash(password, 10),
+      role: ["admin", "agent", "customer"].includes(role) ? role : "admin",
+      tenant: tenant.id,
+      verified: true,
+      createdAt: new Date(),
+    };
+
+    memoryStore.tenants.push(tenant);
+    memoryStore.users.push(user);
+    saveMemoryStore();
+
+    return res.status(201).json({
+      message: "User registered successfully",
+      success: true,
+      user: {
+        ...publicUser(user),
+        tenant,
+      },
+    });
+  }
 
   const isUserAlreadyExists = await userModel.findOne({
     $or: [{ email }, { username }],
@@ -80,6 +136,46 @@ export async function register(req, res) {
 export async function login(req, res) {
   const { email, password } = req.body;
 
+  if (!isMongoConnected()) {
+    const user = memoryStore.users.find(
+      (item) => item.email === email.toLowerCase(),
+    );
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({
+        message: "Invalid email or password",
+        success: false,
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        tenant: user.tenant,
+      },
+      getJwtSecret(),
+      { expiresIn: "7d" },
+    );
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    return res.status(200).json({
+      message: "Login successful",
+      success: true,
+      user: {
+        ...publicUser(user),
+        tenant: getTenant(user.tenant),
+      },
+      token,
+    });
+  }
+
   const user = await userModel.findOne({ email });
 
   if (!user) {
@@ -138,6 +234,26 @@ export async function login(req, res) {
 
 export async function getMe(req, res) {
   const userId = req.user.id;
+
+  if (!isMongoConnected()) {
+    const user = memoryStore.users.find((item) => item.id === userId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+        success: false,
+      });
+    }
+
+    return res.status(200).json({
+      message: "User details fetched successfully",
+      success: true,
+      user: {
+        ...publicUser(user),
+        tenant: getTenant(user.tenant),
+      },
+    });
+  }
 
   const user = await userModel.findById(userId)
     .select("-password")

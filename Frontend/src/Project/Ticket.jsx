@@ -1,133 +1,230 @@
+import { useEffect, useMemo, useState } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
-import { useState, useEffect } from 'react';
-import { FiFilter, FiRefreshCw } from "react-icons/fi";
-import { AiOutlineUser } from "react-icons/ai";
+import { FiRefreshCw } from "react-icons/fi";
 import { IoSparklesOutline } from "react-icons/io5";
 import { MdOutlineInsertDriveFile } from "react-icons/md";
 
-const initialTickets = [
-  { id: "TK-1001", title: "Payment gateway not working", user: "Michael Johnson", time: "2m ago", priority: "high", status: "open" },
-  { id: "TK-1002", title: "Unable to login to account", user: "Sarah Williams", time: "15m ago", priority: "medium", status: "open" },
-  { id: "TK-1003", title: "Invoice not generated", user: "David Brown", time: "1h ago", priority: "low", status: "pending" },
-  { id: "TK-1004", title: "Feature request: Dark mode", user: "Emily Davis", time: "2h ago", priority: "low", status: "resolved" },
-  { id: "TK-1005", title: "Bug in the reporting module", user: "James Wilson", time: "3h ago", priority: "high", status: "open" },
-];
+import api, { getErrorMessage } from "../lib/api";
+import { useAuth } from "../features/auth/AuthContext";
 
 const priorityStyles = {
-  high: "bg-red-500/20 text-red-400",
-  medium: "bg-yellow-500/20 text-yellow-400",
-  low: "bg-green-500/20 text-green-400",
+  Critical: "bg-red-500/20 text-red-300",
+  High: "bg-orange-500/20 text-orange-300",
+  Medium: "bg-yellow-500/20 text-yellow-300",
+  Low: "bg-green-500/20 text-green-300",
 };
 
 const statusStyles = {
-  open: "bg-blue-500/20 text-blue-400",
-  pending: "bg-yellow-500/20 text-yellow-400",
-  resolved: "bg-green-500/20 text-green-400",
+  open: "bg-blue-500/20 text-blue-300",
+  pending: "bg-yellow-500/20 text-yellow-300",
+  resolved: "bg-green-500/20 text-green-300",
+  closed: "bg-slate-500/20 text-slate-300",
+};
+
+const emptyForm = {
+  title: "",
+  description: "",
+  channel: "web",
 };
 
 const Ticket = () => {
-  // --- STATES ---
-  // 1. Initial State ko LocalStorage se check kar rahe hain
-  const [tickets, setTickets] = useState(() => {
-    const saved = localStorage.getItem('tenantDesk_tickets');
-    return saved ? JSON.parse(saved) : initialTickets;
-  });
-
+  const { user } = useAuth();
+  const [tickets, setTickets] = useState([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [filter, setFilter] = useState("all");
-  const [tab, setTab] = useState("conversation");
   const [searchTerm, setSearchTerm] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [newTicket, setNewTicket] = useState({ title: "", priority: "low" });
+  const [newTicket, setNewTicket] = useState(emptyForm);
+  const [replyText, setReplyText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
-  const [messages, setMessages] = useState([
-    { id: 1, sender: "user", name: "Michael Johnson", text: "Hi, I'm trying to make a payment but the gateway is showing an error.", time: "2m ago" },
-    { id: 2, sender: "ai", name: "AI Assistant", text: "Customer is facing payment gateway issue. Tried multiple cards.", time: "1m ago" },
-    { id: 3, sender: "agent", name: "John Smith", text: "Hi Michael, let me check this for you.", time: "Just now" },
-  ]);
+  const loadTickets = async () => {
+    setLoading(true);
+    setError("");
 
-  // 2. Jab bhi tickets change honge, storage update hogi
+    try {
+      const { data } = await api.get("/tickets");
+      const nextTickets = data.tickets || [];
+      setTickets(nextTickets);
+      setSelectedId((current) => current || nextTickets[0]?._id || "");
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load tickets"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTicketDetails = async (ticketId) => {
+    if (!ticketId) {
+      setSelectedTicket(null);
+      setMessages([]);
+      return;
+    }
+
+    setDetailLoading(true);
+
+    try {
+      const { data } = await api.get(`/tickets/${ticketId}`);
+      setSelectedTicket(data.ticket);
+      setMessages(data.messages || []);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to load ticket details"));
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem('tenantDesk_tickets', JSON.stringify(tickets));
-  }, [tickets]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadTickets();
+  }, []);
 
-  // --- LOGIC ---
-  const filtered = tickets.filter((t) => {
-    const matchesFilter = filter === "all" ? true : t.status === filter;
-    const matchesSearch = t.title.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadTicketDetails(selectedId);
+  }, [selectedId]);
 
-  const counts = {
-    all: tickets.length,
-    open: tickets.filter(t => t.status === 'open').length,
-    pending: tickets.filter(t => t.status === 'pending').length,
-    resolved: tickets.filter(t => t.status === 'resolved').length,
+  const filtered = useMemo(
+    () =>
+      tickets.filter((ticket) => {
+        const matchesFilter = filter === "all" || ticket.status === filter;
+        const haystack = `${ticket.title} ${ticket.description}`.toLowerCase();
+        return matchesFilter && haystack.includes(searchTerm.toLowerCase());
+      }),
+    [tickets, filter, searchTerm],
+  );
+
+  const counts = useMemo(
+    () => ({
+      all: tickets.length,
+      open: tickets.filter((ticket) => ticket.status === "open").length,
+      pending: tickets.filter((ticket) => ticket.status === "pending").length,
+      resolved: tickets.filter((ticket) => ticket.status === "resolved").length,
+    }),
+    [tickets],
+  );
+
+  const handleAddTicket = async (event) => {
+    event.preventDefault();
+    setError("");
+    setNotice("");
+
+    try {
+      const { data } = await api.post("/tickets", newTicket);
+      setTickets((current) => [data.ticket, ...current]);
+      setSelectedId(data.ticket._id);
+      setShowForm(false);
+      setNewTicket(emptyForm);
+      setNotice("Ticket created and analyzed by AI.");
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to create ticket"));
+    }
   };
 
-  const handleAddTicket = (e) => {
-    e.preventDefault();
-    const ticketObj = {
-      id: `TK-${1000 + tickets.length + 1}`,
-      title: newTicket.title,
-      user: "Ganesh Rajput", 
-      time: "Just now",
-      priority: newTicket.priority,
-      status: "open",
-    };
+  const updateStatus = async (status) => {
+    if (!selectedTicket) return;
 
-    // Direct update and save
-    const updatedTickets = [ticketObj, ...tickets];
-    setTickets(updatedTickets);
-    localStorage.setItem('tenantDesk_tickets', JSON.stringify(updatedTickets));
-    
-    setShowForm(false);
-    setNewTicket({ title: "", priority: "low" });
+    try {
+      const { data } = await api.patch(`/tickets/${selectedTicket._id}`, { status });
+      setSelectedTicket((current) => ({ ...current, ...data.ticket }));
+      setTickets((current) =>
+        current.map((ticket) =>
+          ticket._id === data.ticket._id ? { ...ticket, ...data.ticket } : ticket,
+        ),
+      );
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to update ticket"));
+    }
   };
+
+  const sendMessage = async () => {
+    if (!replyText.trim() || !selectedTicket) return;
+
+    try {
+      await api.post(`/tickets/${selectedTicket._id}/messages`, { body: replyText });
+      setReplyText("");
+      await loadTicketDetails(selectedTicket._id);
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to send message"));
+    }
+  };
+
+  const refreshSuggestion = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      const { data } = await api.post(`/tickets/${selectedTicket._id}/suggest-reply`);
+      setSelectedTicket((current) => ({
+        ...current,
+        ai: data.ai,
+        priority: data.ai.priority,
+        category: data.ai.category,
+        department: data.ai.recommendedDepartment,
+      }));
+    } catch (err) {
+      setError(getErrorMessage(err, "Unable to generate AI suggestion"));
+    }
+  };
+
+  const selectedCustomer =
+    selectedTicket?.customer?.username || selectedTicket?.customer?.email || "Customer";
+  const suggestedReply = selectedTicket?.ai?.suggestedReply || "";
 
   return (
-    <div className='flex p-2 border-[#1E293B] relative'>
-      
-      {/* MODAL OVERLAY FOR NEW TICKET */}
+    <div className="flex min-h-full bg-[#020617] text-white">
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-          <form onSubmit={handleAddTicket} className="bg-[#0f172a] p-8 rounded-2xl border border-gray-800 w-[400px] shadow-2xl space-y-6">
-            <h2 className="text-xl font-bold text-white">Raise New Ticket</h2>
+          <form
+            onSubmit={handleAddTicket}
+            className="bg-[#0f172a] p-8 rounded-2xl border border-gray-800 w-full max-w-lg shadow-2xl space-y-5"
+          >
+            <h2 className="text-xl font-bold">Raise New Ticket</h2>
+            <TextInput
+              label="Issue Title"
+              value={newTicket.title}
+              onChange={(title) => setNewTicket({ ...newTicket, title })}
+              placeholder="Payment gateway not working"
+            />
             <div className="space-y-2">
-              <label className="text-sm text-gray-400">Issue Title</label>
-              <input 
+              <label className="text-sm text-gray-400">Description</label>
+              <textarea
                 required
-                type="text" 
-                placeholder="e.g. Login page crashing"
+                rows={5}
+                value={newTicket.description}
+                onChange={(event) =>
+                  setNewTicket({ ...newTicket, description: event.target.value })
+                }
+                placeholder="Describe the issue so AI can classify it."
                 className="w-full p-3 bg-[#1E293B] text-white rounded-lg outline-none border border-transparent focus:border-indigo-500"
-                value={newTicket.title}
-                onChange={(e) => setNewTicket({...newTicket, title: e.target.value})}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm text-gray-400">Priority</label>
-              <select 
-                className="w-full p-3 bg-[#1E293B] text-white rounded-lg outline-none border border-transparent focus:border-indigo-500"
-                value={newTicket.priority}
-                onChange={(e) => setNewTicket({...newTicket, priority: e.target.value})}
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
             <div className="flex gap-3 pt-2">
-              <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-medium transition">Create Ticket</button>
-              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-700 hover:bg-gray-800 py-3 rounded-xl transition">Cancel</button>
+              <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 py-3 rounded-xl font-medium transition">
+                Create Ticket
+              </button>
+              <button type="button" onClick={() => setShowForm(false)} className="flex-1 border border-gray-700 hover:bg-gray-800 py-3 rounded-xl transition">
+                Cancel
+              </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* First Div: All Ticket */}
-      <div className='py-4 px-6 bg-gray-800 rounded-lg w-1/3'>
-        <h1 className="text-xl font-semibold mb-4 text-white">
-          All Tickets ({counts.all})
-        </h1>
+      <section className="w-[32%] min-w-[320px] border-r border-gray-800 bg-gray-900/80 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-xl font-semibold">All Tickets ({counts.all})</h1>
+          <button onClick={loadTickets} className="p-2 rounded-lg bg-[#1E293B] text-gray-300 hover:text-white">
+            <FiRefreshCw />
+          </button>
+        </div>
+
+        {error && <Alert tone="red">{error}</Alert>}
+        {notice && <Alert tone="green">{notice}</Alert>}
 
         <div className="flex justify-between gap-2 mb-4">
           <div className="relative flex-1">
@@ -137,175 +234,221 @@ const Ticket = () => {
               placeholder="Search..."
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#1E293B] text-white outline-none border border-gray-700 focus:border-indigo-500"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(event) => setSearchTerm(event.target.value)}
             />
           </div>
-          <div className="p-2 bg-[#1E293B] text-gray-400 border border-gray-700 rounded-lg cursor-pointer hover:text-white">
-            <SlidersHorizontal size={20}/>
+          <div className="p-2 bg-[#1E293B] text-gray-400 border border-gray-700 rounded-lg">
+            <SlidersHorizontal size={20} />
           </div>
         </div>
-        
-        {/* Filters */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          <button onClick={() => setFilter("all")} className={`px-4 py-2 rounded-lg text-sm ${filter === 'all' ? 'bg-indigo-600 text-white' : 'bg-[#1E293B] text-gray-400'}`}>
-            All
-          </button>
-          <button onClick={() => setFilter("open")} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/20 text-blue-400 text-sm whitespace-nowrap">
-            Open <span className="bg-blue-500/30 px-1.5 rounded text-xs">{counts.open}</span>
-          </button>
-          <button onClick={() => setFilter("pending")} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm whitespace-nowrap">
-            Pending <span className="bg-yellow-500/30 px-1.5 rounded text-xs">{counts.pending}</span>
-          </button>
-          <button onClick={() => setFilter("resolved")} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/20 text-green-400 text-sm whitespace-nowrap">
-            Resolved <span className="bg-green-500/30 px-1.5 rounded text-xs">{counts.resolved}</span>
-          </button>
-        </div>
 
-        {/* Tickets List */}
-        <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
-          {filtered.map((t) => (
-            <div key={t.id} className="p-4 rounded-xl bg-[#0F172A] border border-gray-800 flex justify-between items-start hover:border-indigo-500 transition cursor-pointer">
-              <div>
-                <h2 className="font-medium text-white text-sm line-clamp-1">{t.title}</h2>
-                <p className="text-xs text-gray-400 mt-1">{t.user} • {t.time}</p>
-                <p className="text-[10px] text-gray-500 mt-1">#{t.id}</p>
-              </div>
-              <div className="flex flex-col gap-2 items-end">
-                <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${priorityStyles[t.priority]}`}>{t.priority}</span>
-                <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${statusStyles[t.status]}`}>{t.status}</span>
-              </div>
-            </div>
+        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+          {["all", "open", "pending", "resolved"].map((item) => (
+            <button
+              key={item}
+              onClick={() => setFilter(item)}
+              className={`px-3 py-2 rounded-lg text-sm capitalize whitespace-nowrap ${
+                filter === item ? "bg-indigo-600 text-white" : "bg-[#1E293B] text-gray-400"
+              }`}
+            >
+              {item} <span className="text-xs">{counts[item]}</span>
+            </button>
           ))}
         </div>
-      </div>
 
-      {/* Second Div: Integrated Middle Section */}
-      <div className="bg-[#020617] text-white p-6 w-1/3 min-h-screen border-r border-gray-800 overflow-y-auto">
-          <div className="mb-4">
+        <div className="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
+          {loading && <p className="text-sm text-gray-400">Loading tickets...</p>}
+          {!loading && filtered.length === 0 && (
+            <p className="text-sm text-gray-400">No tickets found.</p>
+          )}
+          {filtered.map((ticket) => (
+            <button
+              key={ticket._id}
+              onClick={() => setSelectedId(ticket._id)}
+              className={`w-full text-left p-4 rounded-xl bg-[#0F172A] border flex justify-between items-start hover:border-indigo-500 transition ${
+                selectedId === ticket._id ? "border-indigo-500" : "border-gray-800"
+              }`}
+            >
+              <div className="min-w-0">
+                <h2 className="font-medium text-sm truncate">{ticket.title}</h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  {ticket.customer?.username || user?.username || "Customer"}
+                </p>
+                <p className="text-[10px] text-gray-500 mt-1">#{ticket._id.slice(-6).toUpperCase()}</p>
+              </div>
+              <div className="flex flex-col gap-2 items-end">
+                <Badge className={priorityStyles[ticket.priority]}>{ticket.priority}</Badge>
+                <Badge className={statusStyles[ticket.status]}>{ticket.status}</Badge>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="w-[38%] min-w-[420px] p-6 border-r border-gray-800 overflow-y-auto">
+        {!selectedTicket && (
+          <div className="h-full grid place-items-center text-gray-400">
+            Select a ticket to view details.
+          </div>
+        )}
+
+        {selectedTicket && (
+          <>
+            <div className="mb-5">
               <h1 className="text-lg font-semibold">
-                  Payment gateway not working
-                  <span className="ml-3 px-2 py-1 text-xs bg-red-500/20 text-red-400 rounded">
-                      High Priority
-                  </span>
+                {selectedTicket.title}
+                <Badge className={`ml-3 ${priorityStyles[selectedTicket.priority]}`}>
+                  {selectedTicket.priority}
+                </Badge>
               </h1>
               <p className="text-sm text-gray-400">
-                  Ticket #TK-1001 • Created 2m ago • Via Web
+                Ticket #{selectedTicket._id.slice(-6).toUpperCase()} · Via {selectedTicket.channel}
               </p>
-          </div>
+            </div>
 
-          <div className="grid grid-cols-4 gap-4 mb-6">
-              <div className="bg-[#0F172A] p-3 rounded-lg border border-gray-800">
-                  <p className="text-xs text-gray-400">Status</p>
-                  <p className="text-blue-400">Open</p>
-              </div>
-              <div className="bg-[#0F172A] p-3 rounded-lg border border-gray-800">
-                  <p className="text-xs text-gray-400">Assigned</p>
-                  <p className="text-sm">John Smith</p>
-              </div>
-              <div className="bg-[#0F172A] p-3 rounded-lg border border-gray-800">
-                  <p className="text-xs text-gray-400">Team</p>
-                  <p className="text-sm">Billing Team</p>
-              </div>
-              <div className="bg-[#0F172A] p-3 rounded-lg border border-gray-800">
-                  <p className="text-xs text-gray-400">SLA</p>
-                  <p className="text-green-400 text-sm">2h left</p>
-              </div>
-          </div>
+            <div className="grid grid-cols-4 gap-3 mb-6">
+              <InfoCard label="Status" value={selectedTicket.status} />
+              <InfoCard label="Category" value={selectedTicket.category} />
+              <InfoCard label="Team" value={selectedTicket.department} />
+              <InfoCard label="Customer" value={selectedCustomer} />
+            </div>
 
-          <div className="flex gap-6 border-b border-gray-700 mb-4">
-              {["conversation", "details", "notes"].map((t) => (
-                  <button
-                      key={t}
-                      onClick={() => setTab(t)}
-                      className={`pb-2 capitalize text-sm transition ${
-                          tab === t ? "border-b-2 border-indigo-500 text-indigo-400" : "text-gray-400 hover:text-white"
-                      }`}
-                  >
-                      {t}
-                  </button>
+            <div className="flex gap-3 mb-5">
+              {["open", "pending", "resolved", "closed"].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => updateStatus(status)}
+                  className={`px-3 py-2 rounded-lg text-xs capitalize ${
+                    selectedTicket.status === status ? "bg-indigo-600" : "bg-[#1E293B] text-gray-300"
+                  }`}
+                >
+                  {status}
+                </button>
               ))}
-          </div>
+            </div>
 
-          <div className="space-y-4 mb-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-              {messages.map((msg) => (
-                  <div
-                      key={msg.id}
-                      className={`p-4 rounded-xl max-w-full ${
-                          msg.sender === "user" ? "bg-[#0F172A]" : msg.sender === "ai" ? "bg-indigo-500/20" : "bg-[#1E293B] ml-auto"
-                      }`}
-                  >
-                      <p className="text-xs text-gray-400 mb-1">{msg.name} • {msg.time}</p>
-                      <p className="text-sm">{msg.text}</p>
-                  </div>
+            <div className="space-y-4 mb-6 max-h-[45vh] overflow-y-auto pr-2">
+              {detailLoading && <p className="text-sm text-gray-400">Loading conversation...</p>}
+              {messages.map((message) => (
+                <div
+                  key={message._id}
+                  className={`p-4 rounded-xl max-w-full ${
+                    message.author?._id === user?.id || message.author === user?.id
+                      ? "bg-[#1E293B] ml-auto"
+                      : "bg-[#0F172A]"
+                  }`}
+                >
+                  <p className="text-xs text-gray-400 mb-1">
+                    {message.author?.username || selectedCustomer}
+                  </p>
+                  <p className="text-sm whitespace-pre-wrap">{message.body}</p>
+                </div>
               ))}
-          </div>
+            </div>
 
-          <div className="bg-[#0F172A] p-4 rounded-xl border border-gray-800 flex items-center gap-3 sticky bottom-0">
+            <div className="bg-[#0F172A] p-4 rounded-xl border border-gray-800 flex items-center gap-3 sticky bottom-0">
               <input
-                  type="text"
-                  placeholder="Type your message..."
-                  className="flex-1 bg-transparent outline-none text-sm"
+                type="text"
+                placeholder="Type your message..."
+                value={replyText}
+                onChange={(event) => setReplyText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") sendMessage();
+                }}
+                className="flex-1 bg-transparent outline-none text-sm"
               />
-              <button className="bg-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-                  Send
+              <button onClick={sendMessage} className="bg-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                Send
               </button>
-          </div>
-      </div>
+            </div>
+          </>
+        )}
+      </section>
 
-      {/* Third Div: AI Sidebar */}
-      <div className="bg-[#0b1120] text-white p-6 w-1/3">
-        <div className="flex gap-3 mb-6">
-          <button className="border border-gray-800 px-4 py-2 rounded-lg flex items-center gap-2 text-xs text-gray-300 hover:bg-gray-800 transition"><FiFilter /> Filters</button>
-          <button onClick={() => setShowForm(true)} className="ml-auto bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition shadow-lg shadow-indigo-500/20">
+      <aside className="flex-1 min-w-[300px] bg-[#0b1120] p-6">
+        <div className="flex justify-end mb-6">
+          <button onClick={() => setShowForm(true)} className="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition shadow-lg shadow-indigo-500/20">
             + NEW TICKET
           </button>
         </div>
 
         <div className="bg-[#0f172a] border border-gray-800 rounded-2xl p-5 space-y-6 shadow-xl">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
-              <AiOutlineUser /> AI Assistant <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded-full uppercase">Beta</span>
-            </div>
-            <button className="text-gray-600 hover:text-gray-400">✕</button>
+          <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
+            <IoSparklesOutline /> AI Assistant
+            <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded-full uppercase">Live</span>
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-purple-400 text-sm font-medium"><IoSparklesOutline /> Suggested Reply</div>
-            <div className="bg-[#020617] border border-gray-800 rounded-xl p-4 text-sm text-gray-300 leading-relaxed">
-              <p>Hi Michael,</p>
-              <br />
-              <p>I understand you are facing issues with the payment gateway.</p>
-              <p>Our team is already looking into this. Could you please share a screenshot of the error you are seeing?</p>
-              <br />
-              <p>This will help us resolve it faster.</p>
-              <br />
-              <p>Thanks,</p>
-              <p>Support Team</p>
+            <div className="flex items-center gap-2 text-purple-400 text-sm font-medium">
+              <IoSparklesOutline /> Suggested Reply
+            </div>
+            <div className="bg-[#020617] border border-gray-800 rounded-xl p-4 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap min-h-32">
+              {suggestedReply || "Select or create a ticket to generate an AI reply."}
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-indigo-600/30 transition"><MdOutlineInsertDriveFile /> INSERT</button>
-              <button className="flex-1 border border-gray-800 text-gray-400 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-gray-800 transition"><FiRefreshCw /> REGEN</button>
+              <button
+                onClick={() => setReplyText(suggestedReply)}
+                disabled={!suggestedReply}
+                className="flex-1 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-indigo-600/30 transition disabled:opacity-40"
+              >
+                <MdOutlineInsertDriveFile /> INSERT
+              </button>
+              <button
+                onClick={refreshSuggestion}
+                disabled={!selectedTicket}
+                className="flex-1 border border-gray-800 text-gray-400 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-gray-800 transition disabled:opacity-40"
+              >
+                <FiRefreshCw /> REGEN
+              </button>
             </div>
           </div>
 
-          <div className="pt-4 border-t border-gray-800">
-            <h3 className="text-xs font-bold text-gray-500 uppercase mb-3">Sentiment Analysis</h3>
-            <div className="flex justify-between items-end mb-2">
-               <span className="text-xs text-red-400 font-medium">Negative</span>
-               <span className="text-xs text-gray-500">85%</span>
-            </div>
-            <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-red-500 h-full w-[85%] shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
-            </div>
+          <div className="pt-4 border-t border-gray-800 space-y-3">
+            <h3 className="text-xs font-bold text-gray-500 uppercase">AI Classification</h3>
+            <InfoCard label="Sentiment" value={selectedTicket?.ai?.sentiment || "-"} />
+            <InfoCard label="Summary" value={selectedTicket?.ai?.summary || "-"} />
           </div>
-          
-          <button className="w-full bg-indigo-600 py-3 rounded-xl text-xs font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition">
-            ESCALATE TO HUMAN AGENT
-          </button>
         </div>
-      </div>
+      </aside>
     </div>
   );
-}
+};
+
+const Alert = ({ children, tone }) => (
+  <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${
+    tone === "red"
+      ? "border-red-500/30 bg-red-500/10 text-red-300"
+      : "border-green-500/30 bg-green-500/10 text-green-300"
+  }`}>
+    {children}
+  </div>
+);
+
+const Badge = ({ children, className = "" }) => (
+  <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${className}`}>
+    {children}
+  </span>
+);
+
+const InfoCard = ({ label, value }) => (
+  <div className="bg-[#0F172A] p-3 rounded-lg border border-gray-800 min-w-0">
+    <p className="text-xs text-gray-400">{label}</p>
+    <p className="text-sm truncate">{value}</p>
+  </div>
+);
+
+const TextInput = ({ label, value, onChange, placeholder }) => (
+  <div className="space-y-2">
+    <label className="text-sm text-gray-400">{label}</label>
+    <input
+      required
+      type="text"
+      placeholder={placeholder}
+      className="w-full p-3 bg-[#1E293B] text-white rounded-lg outline-none border border-transparent focus:border-indigo-500"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  </div>
+);
 
 export default Ticket;

@@ -1,63 +1,66 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
+import Layout from "../components/layout/Layout";
+import ProtectedRoute from "../features/auth/ProtectedRoute";
 import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
-// import Tickets from "../pages/Tickets";
-import Ticket from "../Project/Ticket"
-import Layout from "../components/layout/Layout";
-import Setting from "../../src/Project/Setting"
-import AIAssistant from "../../src/Project/AIAssistant";
-import Charts from "../../src/Project/Charts"
-import Analytics from "../../src/Project/Analytics";
-import KnowledgeBase from "../../src/Project/KnowledgeBase"
-import Customers from "../../src/Project/Customers";
-import Team from "../../src/Project/Team";
-import Dashboard from "../../src/Project/Dashboard";
+import AIAssistant from "../Project/AIAssistant";
+import Analytics from "../Project/Analytics";
+import Charts from "../Project/Charts";
+import Customers from "../Project/Customers";
+import Dashboard from "../Project/Dashboard";
+import KnowledgeBase from "../Project/KnowledgeBase";
+import Setting from "../Project/Setting";
+import Team from "../Project/Team";
+import Ticket from "../Project/Ticket";
 
 export const router = createBrowserRouter([
-
   {
     path: "/",
-    element: <Layout/>, // landing
-    children:[
+    element: <ProtectedRoute />,
+    children: [
       {
-        index : true,
-        element: <Dashboard/>,
-        
+        element: <Layout />,
+        children: [
+          {
+            index: true,
+            element: <Dashboard />,
+          },
+          {
+            path: "tickets",
+            element: <Ticket />,
+          },
+          {
+            path: "setting",
+            element: <Setting />,
+          },
+          {
+            path: "AiAssistant",
+            element: <AIAssistant />,
+          },
+          {
+            path: "charts",
+            element: <Charts />,
+          },
+          {
+            path: "analytics",
+            element: <Analytics />,
+          },
+          {
+            path: "KnowledgeBase",
+            element: <KnowledgeBase />,
+          },
+          {
+            path: "customer",
+            element: <Customers />,
+          },
+          {
+            path: "team",
+            element: <Team />,
+          },
+        ],
       },
-    {  
-    path: "tickets",
-    element: <Ticket />,
-  },
-  {
-    path:"setting",
-    element: <Setting/>
-  },
-  {
-    path:"AiAssistant",
-    element: <AIAssistant/>
-  },
-  {
-    path:"charts",
-    element: <Charts/>
-  },
-  {
-    path:"analytics",
-    element : <Analytics/>
-  },
-  {
-    path:"KnowledgeBase",
-    element: <KnowledgeBase/>
-  },
-  {
-    path:"customer",
-    element: <Customers/>
-  },
-  {
-    path:"team",
-    element: <Team/>
-  }
-    ]
+    ],
   },
   {
     path: "/login",
@@ -69,6 +72,6 @@ export const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <Navigate to="/" />,
+    element: <Navigate to="/" replace />,
   },
 ]);
