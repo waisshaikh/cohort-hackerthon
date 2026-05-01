@@ -1,7 +1,9 @@
 import jwt from "jsonwebtoken";
 
+import Tenant from "../models/tenant.model.js";
 import userModel from "../models/user.model.js";
 import { sendEmail } from "../services/mail.service.js";
+import { uniqueSlug } from "../utils/slug.js";
 
 const getJwtSecret = () => {
   if (!process.env.JWT_SECRET) {
@@ -12,7 +14,7 @@ const getJwtSecret = () => {
 };
 
 export async function register(req, res) {
-  const { username, email, password } = req.body;
+  const { username, email, password, tenantName, role = "admin" } = req.body;
 
   const isUserAlreadyExists = await userModel.findOne({
     $or: [{ email }, { username }],
@@ -26,23 +28,37 @@ export async function register(req, res) {
     });
   }
 
-  const user = await userModel.create({ username, email, password });
+  const tenant = await Tenant.create({
+    name: tenantName || `${username}'s Workspace`,
+    slug: uniqueSlug(tenantName || username),
+  });
+
+  const user = await userModel.create({
+    username,
+    email,
+    password,
+    role: ["admin", "agent", "customer"].includes(role) ? role : "admin",
+    tenant: tenant._id,
+    verified: process.env.REQUIRE_EMAIL_VERIFICATION === "true" ? false : true,
+  });
 
   const emailVerificationToken = jwt.sign(
     { email: user.email },
     getJwtSecret(),
   );
 
-  await sendEmail({
-    to: email,
-    subject: "Verify your email",
-    html: `
-    <h2>Verify Email</h2>
-    <a href="http://localhost:3000/api/auth/verify-email?token=${emailVerificationToken}">
-      Click to verify
-    </a>
-  `,
-  });
+  if (process.env.REQUIRE_EMAIL_VERIFICATION === "true") {
+    await sendEmail({
+      to: email,
+      subject: "Verify your email",
+      html: `
+      <h2>Verify Email</h2>
+      <a href="http://localhost:5000/api/auth/verify-email?token=${emailVerificationToken}">
+        Click to verify
+      </a>
+    `,
+    });
+  }
 
   res.status(201).json({
     message: "User registered successfully",
@@ -51,6 +67,12 @@ export async function register(req, res) {
       id: user._id,
       username: user.username,
       email: user.email,
+      role: user.role,
+      tenant: {
+        id: tenant._id,
+        name: tenant.name,
+        slug: tenant.slug,
+      },
     },
   });
 }
@@ -87,12 +109,18 @@ export async function login(req, res) {
     {
       id: user._id,
       username: user.username,
+      role: user.role,
+      tenant: user.tenant,
     },
     getJwtSecret(),
     { expiresIn: "7d" },
   );
 
-  res.cookie("token", token);
+  res.cookie("token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   res.status(200).json({
     message: "Login successful",
@@ -101,14 +129,19 @@ export async function login(req, res) {
       id: user._id,
       username: user.username,
       email: user.email,
+      role: user.role,
+      tenant: user.tenant,
     },
+    token,
   });
 }
 
 export async function getMe(req, res) {
   const userId = req.user.id;
 
-  const user = await userModel.findById(userId).select("-password");
+  const user = await userModel.findById(userId)
+    .select("-password")
+    .populate("tenant", "name slug plan status settings");
 
   if (!user) {
     return res.status(404).json({

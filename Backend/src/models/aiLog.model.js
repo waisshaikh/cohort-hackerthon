@@ -52,6 +52,17 @@ const aiAnalysisSchema = new mongoose.Schema(
 
 const aiLogSchema = new mongoose.Schema(
   {
+    tenant: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Tenant",
+      default: null,
+      index: true,
+    },
+    ticket: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Ticket",
+      default: null,
+    },
     message: {
       type: String,
       required: true,

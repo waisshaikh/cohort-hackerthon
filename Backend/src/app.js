@@ -1,11 +1,21 @@
 import express from "express";
 import cookieParser from "cookie-parser";
+import cors from "cors";
 
+import analyticsRoutes from "./routes/analytics.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
+import tenantRoutes from "./routes/tenant.routes.js";
+import ticketRoutes from "./routes/ticket.routes.js";
 
 const app = express();
 
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+  }),
+);
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
@@ -19,6 +29,9 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/tenants", tenantRoutes);
+app.use("/api/tickets", ticketRoutes);
+app.use("/api/analytics", analyticsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({

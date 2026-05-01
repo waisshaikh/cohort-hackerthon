@@ -31,6 +31,17 @@ export const registerValidator = [
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters"),
 
+  body("tenantName")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 80 })
+    .withMessage("Tenant name must be between 2 and 80 characters"),
+
+  body("role")
+    .optional()
+    .isIn(["admin", "agent", "customer"])
+    .withMessage("Role must be admin, agent, or customer"),
+
   validate,
 ];
 
