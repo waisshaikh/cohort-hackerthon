@@ -28,7 +28,6 @@ const Register = () => {
         email,
         password,
         tenantName,
-        role: "admin",
       });
       setSuccess("Account created. You can sign in now.");
       setTimeout(() => navigate("/login"), 700);

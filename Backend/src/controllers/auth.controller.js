@@ -23,7 +23,7 @@ const getJwtSecret = () => {
 };
 
 export async function register(req, res) {
-  const { username, email, password, tenantName, role = "admin" } = req.body;
+ const { username, email, password, tenantName } = req.body;
 
   if (!isMongoConnected()) {
     const existingUser = memoryStore.users.find(
@@ -52,11 +52,12 @@ export async function register(req, res) {
       username,
       email: email.toLowerCase(),
       password: await bcrypt.hash(password, 10),
-      role: ["admin", "agent", "customer"].includes(role) ? role : "admin",
+      role: "TENANT_ADMIN",
       tenant: tenant.id,
       verified: true,
       createdAt: new Date(),
     };
+    
 
     memoryStore.tenants.push(tenant);
     memoryStore.users.push(user);
@@ -93,7 +94,7 @@ export async function register(req, res) {
     username,
     email,
     password,
-    role: ["admin", "agent", "customer"].includes(role) ? role : "admin",
+    role: "TENANT_ADMIN",
     tenant: tenant._id,
     verified: process.env.REQUIRE_EMAIL_VERIFICATION === "true" ? false : true,
   });

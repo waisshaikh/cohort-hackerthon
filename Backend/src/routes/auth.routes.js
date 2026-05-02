@@ -6,7 +6,7 @@ import { registerValidator, loginValidator } from "../validators/auth.validator.
 
 const router = Router();
 
-router.post("/register", registerValidator, register);
+router.post("/register-business", registerValidator, register);
 router.post("/login", loginValidator, login);
 router.get("/get-me", authUser, getMe);
 router.get("/verify-email", verifyEmail);
