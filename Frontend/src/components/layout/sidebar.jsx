@@ -15,7 +15,7 @@ import { NavLink } from "react-router-dom";
 import GaneshPic from "../../assets/Ganesh.jpeg";
 import { useAuth } from "../../features/auth/AuthContext";
 
-const defaultLinks = [
+const tenantLinks = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/AiAssistant", label: "AI Assistant", icon: Bot },
@@ -27,14 +27,14 @@ const defaultLinks = [
   { to: "/setting", label: "Settings", icon: Settings },
 ];
 
+const adminLinks = [
+  { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/tenants", label: "Tenants", icon: Building },
+];
+
 const Sidebar = () => {
   const { user } = useAuth();
-  const links = user?.role === "SUPER_ADMIN"
-    ? [
-        ...defaultLinks,
-        { to: "/tenants", label: "Tenants", icon: Building },
-      ]
-    : defaultLinks;
+  const links = user?.role === "SUPER_ADMIN" ? adminLinks : tenantLinks;
 
   return (
     <div className="w-64 bg-[#344c83] p-4 flex flex-col justify-between border-r border-gray-800">

@@ -27,7 +27,7 @@ export const TabsProvider = ({ children }) => {
     const unique = parsed.filter(
       (t, index, self) => index === self.findIndex((x) => x.path === t.path)
     );
-    // ✅ Agar Dashboard nahi hai toh force add karo
+  
     const hasDashboard = unique.find((t) => t.path === "/");
     if (!hasDashboard) {
       return [{ path: "/", label: "Dashboard" }, ...unique];
@@ -60,10 +60,10 @@ export const TabsProvider = ({ children }) => {
   const newTabs = tabs.filter((t) => t.path !== path);
   setTabs(newTabs);
 
-  // ✅ Sirf tab band karo jo currently active hai
   if (location.pathname === path) {
     if (newTabs.length) {
-      // ✅ Dashboard pe jao hamesha (jo index 0 pe hai)
+      
+
       navigate(newTabs[0].path);
     } else {
       navigate("/");

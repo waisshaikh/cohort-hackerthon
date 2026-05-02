@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { FiSearch, FiFilter } from 'react-icons/fi';
+import { FiSearch, FiFilter } from "react-icons/fi";
 
-export default function Customers() {
+export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   return (
@@ -11,7 +11,7 @@ export default function Customers() {
           <div>
             <h1 className="text-3xl font-extrabold text-white">Customer Directory</h1>
             <p className="mt-2 text-slate-400 max-w-2xl">
-              Customer management is being prepared for backend integration. This workspace will list tenant customers, contact details, and support history.
+              Customer management is being prepared for backend integration. This workspace will list tenant customers, contact details and support history.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

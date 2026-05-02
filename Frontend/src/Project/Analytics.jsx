@@ -1,103 +1,101 @@
-import {
-  LineChart,
-  Line,
-  XAxis,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import api, { getErrorMessage } from "../lib/api";
 
-const data = [
-  { name: "Jan", users: 400, tickets: 240 },
-  { name: "Feb", users: 600, tickets: 300 },
-  { name: "Mar", users: 800, tickets: 500 },
-  { name: "Apr", users: 700, tickets: 400 },
-  { name: "May", users: 900, tickets: 650 },
-];
+const Analytics = () => {
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-export default function Analytics() {
-  const [range, setRange] = useState("7d");
+  useEffect(() => {
+    const loadAnalytics = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const { data } = await api.get("/analytics/dashboard");
+        setOverview(data);
+      } catch (err) {
+        setError(getErrorMessage(err, "Unable to load analytics"));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadAnalytics();
+  }, []);
+
+  const chartData = overview?.breakdowns?.status
+    ? Object.entries(overview.breakdowns.status).map(([status, count]) => ({ status, count }))
+    : [];
 
   return (
     <div className="min-h-screen bg-[#0b1120] text-white p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-semibold">Analytics</h1>
-
-          <select
-            value={range}
-            onChange={(e) => setRange(e.target.value)}
-            className="bg-[#020617] border border-gray-700 px-3 py-2 rounded-lg text-sm"
-          >
-            <option value="7d">Last 7 Days</option>
-            <option value="30d">Last 30 Days</option>
-            <option value="90d">Last 3 Months</option>
-          </select>
-        </div>
-
-        {/* Metrics */}
-        <div className="grid grid-cols-4 gap-4">
-          <MetricCard title="Users" value="12.4K" change="+12%" />
-          <MetricCard title="Tickets" value="3.2K" change="+8%" />
-          <MetricCard title="Resolution Rate" value="78%" change="-2%" />
-          <MetricCard title="Response Time" value="1.4h" change="+5%" />
-        </div>
-
-        {/* Main Chart */}
-        <div className="bg-[#0f172a] border border-gray-800 rounded-2xl p-5">
-          <h2 className="mb-4 text-gray-300">Growth Overview</h2>
-
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data}>
-              <XAxis dataKey="name" stroke="#888" />
-              <Tooltip />
-              <Area
-                type="monotone"
-                dataKey="users"
-                stroke="#8b5cf6"
-                fill="#8b5cf6"
-                fillOpacity={0.2}
-              />
-              <Area
-                type="monotone"
-                dataKey="tickets"
-                stroke="#22c55e"
-                fill="#22c55e"
-                fillOpacity={0.2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Insights Section */}
-        <div className="grid grid-cols-2 gap-4">
-
-          <div className="bg-[#0f172a] border border-gray-800 rounded-2xl p-5">
-            <h3 className="text-gray-300 mb-2">Top Insight</h3>
-            <p className="text-sm text-gray-400">
-              Ticket volume increased by 20% this month. Most issues are related
-              to payment failures.
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-semibold">Analytics</h1>
+            <p className="mt-2 text-slate-400 max-w-2xl">
+              Your tenant analytics dashboard, powered by backend metrics.
             </p>
           </div>
-
-          <div className="bg-[#0f172a] border border-gray-800 rounded-2xl p-5">
-            <h3 className="text-gray-300 mb-2">AI Suggestion</h3>
-            <p className="text-sm text-gray-400">
-              Consider improving payment gateway reliability or adding fallback
-              options to reduce failures.
-            </p>
-          </div>
-
         </div>
 
+        {error && (
+          <div className="rounded-3xl border border-red-500/20 bg-red-500/10 p-5 text-sm text-red-200">
+            {error}
+          </div>
+        )}
+
+        <div className="grid gap-6 lg:grid-cols-4">
+          {[
+            { title: "Total Tickets", value: overview?.metrics?.totalTickets ?? "--" },
+            { title: "Open Tickets", value: overview?.metrics?.openTickets ?? "--" },
+            { title: "Resolved", value: overview?.metrics?.resolvedTickets ?? "--" },
+            { title: "Resolution", value: overview?.metrics?.resolutionRate ? `${overview.metrics.resolutionRate}%` : "--" },
+          ].map((metric) => (
+            <div key={metric.title} className="rounded-3xl border border-slate-800 bg-[#0f172a] p-6">
+              <p className="text-sm uppercase tracking-[0.2em] text-slate-500 mb-2">{metric.title}</p>
+              <p className="text-3xl font-semibold text-white">{loading ? "..." : metric.value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl border border-slate-800 bg-[#0f172a] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Status breakdown</h2>
+            </div>
+            <div className="h-72">
+              {loading ? (
+                <div className="flex h-full items-center justify-center text-slate-500">Loading chart…</div>
+              ) : chartData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-slate-500">No breakdown data available.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <XAxis dataKey="status" stroke="#718096" />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="count" stroke="#818cf8" strokeWidth={3} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-slate-800 bg-[#0f172a] p-6">
+            <h2 className="text-lg font-semibold mb-4">Insights</h2>
+            <p className="text-sm text-slate-300">
+              This analytics page is connected to the tenant dashboard endpoint. Expand it with deeper tenant reports and SLA charts as your backend metrics grow.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
-}
+};
+
+export default Analytics;
 
 /* Metric Card */
 function MetricCard({ title, value, change }) {

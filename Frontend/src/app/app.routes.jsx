@@ -2,12 +2,13 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import Layout from "../components/layout/Layout";
 import ProtectedRoute from "../features/auth/ProtectedRoute";
+import { SuperAdminRoute, TenantRoute } from "../features/auth/RoleGuard";
 import Login from "../features/auth/pages/Login";
 import Register from "../features/auth/pages/Register";
 import AIAssistant from "../Project/AIAssistant";
 import Analytics from "../Project/Analytics";
-import Charts from "../Project/Charts";
-import Customers from "../Project/Customers";
+import Charts from "../Project/ChartsPage";
+import Customers from "../Project/CustomersPage";
 import Dashboard from "../Project/Dashboard";
 import KnowledgeBase from "../Project/KnowledgeBase";
 import Setting from "../Project/Setting";
@@ -29,39 +30,75 @@ export const router = createBrowserRouter([
           },
           {
             path: "tickets",
-            element: <Ticket />,
+            element: (
+              <TenantRoute>
+                <Ticket />
+              </TenantRoute>
+            ),
           },
           {
             path: "setting",
-            element: <Setting />,
+            element: (
+              <TenantRoute>
+                <Setting />
+              </TenantRoute>
+            ),
           },
           {
             path: "AiAssistant",
-            element: <AIAssistant />,
+            element: (
+              <TenantRoute>
+                <AIAssistant />
+              </TenantRoute>
+            ),
           },
           {
             path: "charts",
-            element: <Charts />,
+            element: (
+              <TenantRoute>
+                <Charts />
+              </TenantRoute>
+            ),
           },
           {
             path: "analytics",
-            element: <Analytics />,
+            element: (
+              <TenantRoute>
+                <Analytics />
+              </TenantRoute>
+            ),
           },
           {
             path: "KnowledgeBase",
-            element: <KnowledgeBase />,
+            element: (
+              <TenantRoute>
+                <KnowledgeBase />
+              </TenantRoute>
+            ),
           },
           {
             path: "customer",
-            element: <Customers />,
+            element: (
+              <TenantRoute>
+                <Customers />
+              </TenantRoute>
+            ),
           },
           {
             path: "team",
-            element: <Team />,
+            element: (
+              <TenantRoute>
+                <Team />
+              </TenantRoute>
+            ),
           },
           {
             path: "tenants",
-            element: <Tenants />,
+            element: (
+              <SuperAdminRoute>
+                <Tenants />
+              </SuperAdminRoute>
+            ),
           },
         ],
       },
