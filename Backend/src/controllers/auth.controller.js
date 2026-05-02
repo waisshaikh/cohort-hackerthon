@@ -311,3 +311,49 @@ export default {
   getMe,
   verifyEmail,
 };
+
+
+export const inviteAgent = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    const existingUser = await userModel.findOne({
+      $or: [{ email }, { username }],
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
+
+    const agent = await userModel.create({
+      username,
+      email,
+      password,
+      role: "AGENT",
+      tenant: req.user.tenant,
+      verified: true,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Agent invited successfully",
+      user: {
+        id: agent._id,
+        username: agent.username,
+        email: agent.email,
+        role: agent.role,
+        tenant: agent.tenant,
+      },
+    });
+  } catch (error) {
+    console.error("Invite agent error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to invite agent",
+    });
+  }
+};
