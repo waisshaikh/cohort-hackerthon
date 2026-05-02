@@ -4,6 +4,7 @@ import {
   ChartNoAxesCombined,
   EllipsisVertical,
   LayoutDashboard,
+  Plug,
   Settings,
   Ticket,
   Users2,
@@ -24,6 +25,7 @@ const tenantLinks = [
   { to: "/KnowledgeBase", label: "Knowledge Base", icon: MdLibraryBooks },
   { to: "/customer", label: "Customers", icon: PiUsersThreeBold },
   { to: "/team", label: "Team", icon: Users2 },
+  { to: "/integrations", label: "Integrations", icon: Plug },
   { to: "/setting", label: "Settings", icon: Settings },
 ];
 

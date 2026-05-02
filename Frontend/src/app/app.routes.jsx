@@ -10,6 +10,7 @@ import Analytics from "../Project/Analytics";
 import Charts from "../Project/ChartsPage";
 import Customers from "../Project/CustomersPage";
 import Dashboard from "../Project/Dashboard";
+import Integrations from "../Project/Integrations";
 import KnowledgeBase from "../Project/KnowledgeBase";
 import Setting from "../Project/Setting";
 import Team from "../Project/Team";
@@ -41,6 +42,14 @@ export const router = createBrowserRouter([
             element: (
               <TenantRoute>
                 <Setting />
+              </TenantRoute>
+            ),
+          },
+          {
+            path: "integrations",
+            element: (
+              <TenantRoute>
+                <Integrations />
               </TenantRoute>
             ),
           },

@@ -68,6 +68,12 @@ const ticketSchema = new mongoose.Schema(
       enum: ["chat", "email", "web", "whatsapp", "phone"],
       default: "web",
     },
+    source: {
+      type: String,
+      enum: ["WEBSITE", "WHATSAPP", "EMAIL", "LIVE_CHAT", "INSTAGRAM", "PHONE"],
+      default: "WEBSITE",
+      index: true,
+    },
     status: {
       type: String,
       enum: ["open", "pending", "resolved", "closed"],

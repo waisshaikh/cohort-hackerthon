@@ -585,6 +585,7 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
     title,
     description,
     channel,
+    source: "WEBSITE",
     customer: customer._id,
     priority: ai.priority,
     category: ai.category,
