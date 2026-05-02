@@ -135,12 +135,10 @@ export async function register(req, res) {
 }
 
 export async function login(req, res) {
-  console.log("LOGIN FUNCTION HIT");
-
-  const { email, password } = req.body;
+   const { email, password } = req.body;
   const emailNormalized = email.trim().toLowerCase();
 
-  // MEMORY STORE LOGIN (fallback mode)
+ 
   if (!isMongoConnected()) {
     const user = memoryStore.users.find(
       (item) => item.email === emailNormalized,
@@ -186,8 +184,7 @@ export async function login(req, res) {
     email: emailNormalized,
   });
 
-  console.log("Normalized Email:", emailNormalized);
-  console.log("Fetched User:", user);
+
 
   if (!user) {
     return res.status(400).json({
