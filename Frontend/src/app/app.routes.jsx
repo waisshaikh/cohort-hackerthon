@@ -12,6 +12,7 @@ import Dashboard from "../Project/Dashboard";
 import KnowledgeBase from "../Project/KnowledgeBase";
 import Setting from "../Project/Setting";
 import Team from "../Project/Team";
+import Tenants from "../Project/Tenants";
 import Ticket from "../Project/Ticket";
 
 export const router = createBrowserRouter([
@@ -57,6 +58,10 @@ export const router = createBrowserRouter([
           {
             path: "team",
             element: <Team />,
+          },
+          {
+            path: "tenants",
+            element: <Tenants />,
           },
         ],
       },

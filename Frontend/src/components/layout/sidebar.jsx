@@ -1,5 +1,6 @@
 import {
   Bot,
+  Building,
   ChartNoAxesCombined,
   EllipsisVertical,
   LayoutDashboard,
@@ -14,7 +15,7 @@ import { NavLink } from "react-router-dom";
 import GaneshPic from "../../assets/Ganesh.jpeg";
 import { useAuth } from "../../features/auth/AuthContext";
 
-const links = [
+const defaultLinks = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/tickets", label: "Tickets", icon: Ticket },
   { to: "/AiAssistant", label: "AI Assistant", icon: Bot },
@@ -28,6 +29,12 @@ const links = [
 
 const Sidebar = () => {
   const { user } = useAuth();
+  const links = user?.role === "SUPER_ADMIN"
+    ? [
+        ...defaultLinks,
+        { to: "/tenants", label: "Tenants", icon: Building },
+      ]
+    : defaultLinks;
 
   return (
     <div className="w-64 bg-[#344c83] p-4 flex flex-col justify-between border-r border-gray-800">
@@ -56,7 +63,7 @@ const Sidebar = () => {
 
       <div className="text-xs text-gray-400 flex justify-between p-2 rounded-lg bg-[#1E293B]">
         <div className="flex gap-3 min-w-0">
-          <img src={GaneshPic} alt="" className="size-10 rounded-full flex-shrink-0" />
+          <img src={GaneshPic} alt="" className="w-10 h-10 rounded-full shrink-0" />
           <div className="min-w-0">
             <h4 className="font-medium text-sm text-white truncate">
               {user?.username || "User"}
