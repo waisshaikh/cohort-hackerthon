@@ -28,6 +28,7 @@ const sourceStyles = {
   LIVE_CHAT: "bg-indigo-500/20 text-indigo-300",
   INSTAGRAM: "bg-pink-500/20 text-pink-300",
   PHONE: "bg-orange-500/20 text-orange-300",
+  WIDGET: "bg-indigo-500/20 text-indigo-300",
 };
 
 const emptyForm = {

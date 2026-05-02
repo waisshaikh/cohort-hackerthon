@@ -65,12 +65,12 @@ const ticketSchema = new mongoose.Schema(
     },
     channel: {
       type: String,
-      enum: ["chat", "email", "web", "whatsapp", "phone"],
+      enum: ["chat", "email", "web", "whatsapp", "phone", "widget"],
       default: "web",
     },
     source: {
       type: String,
-      enum: ["WEBSITE", "WHATSAPP", "EMAIL", "LIVE_CHAT", "INSTAGRAM", "PHONE"],
+      enum: ["WEBSITE", "WHATSAPP", "EMAIL", "LIVE_CHAT", "INSTAGRAM", "PHONE", "WIDGET"],
       default: "WEBSITE",
       index: true,
     },

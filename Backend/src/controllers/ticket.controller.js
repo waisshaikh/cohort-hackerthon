@@ -580,12 +580,22 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
 
   const ai = await analyzeTicketMessage(description, tenant._id);
 
+  // Determine source based on channel
+  const sourceMap = {
+    widget: "WIDGET",
+    web: "WEBSITE",
+    email: "EMAIL",
+    whatsapp: "WHATSAPP",
+    phone: "PHONE",
+  };
+  const source = sourceMap[channel] || "WEBSITE";
+
   const ticket = await Ticket.create({
     tenant: tenant._id,
     title,
     description,
     channel,
-    source: "WEBSITE",
+    source,
     customer: customer._id,
     priority: ai.priority,
     category: ai.category,
