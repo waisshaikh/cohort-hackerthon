@@ -37,6 +37,8 @@ export const getDashboardAnalytics = asyncHandler(async (req, res) => {
         totalTickets,
         openTickets,
         resolvedTickets,
+        criticalTickets:
+          countBy("priority").find((p) => p._id === "Critical")?.count || 0,
         resolutionRate:
           totalTickets === 0 ? 0 : Math.round((resolvedTickets / totalTickets) * 100),
       },
@@ -77,6 +79,8 @@ export const getDashboardAnalytics = asyncHandler(async (req, res) => {
     metrics: {
       totalTickets,
       openTickets,
+      criticalTickets:
+        byPriority.find((p) => p._id === "Critical")?.count || 0,
       resolvedTickets,
       resolutionRate:
         totalTickets === 0 ? 0 : Math.round((resolvedTickets / totalTickets) * 100),

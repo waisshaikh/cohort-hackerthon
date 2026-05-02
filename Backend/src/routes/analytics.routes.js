@@ -6,11 +6,10 @@ import { requireRoles, requireTenant } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.get(
-  "/dashboard",
+router.get("/dashboard",
   authUser,
   requireTenant,
-  requireRoles("superadmin", "admin", "agent"),
+  requireRoles("SUPER_ADMIN", "TENANT_ADMIN", "AGENT"),
   getDashboardAnalytics,
 );
 
