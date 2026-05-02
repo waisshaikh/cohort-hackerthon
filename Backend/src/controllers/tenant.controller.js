@@ -30,8 +30,8 @@ export const updateWorkspace = asyncHandler(async (req, res) => {
   const updates = {};
   if (name) updates.name = String(name).trim();
   if (settings) updates.settings = settings;
-  if (req.user.role === "superadmin" && status) updates.status = status;
-  if (req.user.role === "superadmin" && plan) updates.plan = plan;
+  if (req.user.role === "SUPER_ADMIN" && status) updates.status = status;
+  if (req.user.role === "SUPER_ADMIN" && plan) updates.plan = plan;
 
   const tenant = await Tenant.findByIdAndUpdate(req.user.tenant, updates, {
     new: true,
@@ -55,7 +55,7 @@ export const addMember = asyncHandler(async (req, res) => {
     });
   }
 
-  if (!["admin", "agent", "customer"].includes(role)) {
+  if (!["TENANT_ADMIN", "AGENT", "CUSTOMER"].includes(role)) {
     return res.status(400).json({
       success: false,
       message: "role must be admin, agent, or customer",
