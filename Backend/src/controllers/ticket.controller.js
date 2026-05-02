@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 import AILog from "../models/aiLog.model.js";
+import Tenant from "../models/tenant.model.js";
 import Message from "../models/message.model.js";
 import Ticket from "../models/ticket.model.js";
 import userModel from "../models/user.model.js";
@@ -539,3 +540,69 @@ export default {
   addMessage,
   suggestReply,
 };
+
+export const createPublicTicket = asyncHandler(async (req, res) => {
+  const { tenantSlug } = req.params;
+  const { name, email, title, description, channel = "web" } = req.body;
+
+  if (!name || !email || !title || !description) {
+    return res.status(400).json({
+      success: false,
+      message: "name, email, title, and description are required",
+    });
+  }
+
+  const tenant = await Tenant.findOne({ slug: tenantSlug, status: "active" });
+
+  if (!tenant) {
+    return res.status(404).json({
+      success: false,
+      message: "Tenant not found",
+    });
+  }
+
+  let customer = await userModel.findOne({
+    email,
+    tenant: tenant._id,
+    role: "CUSTOMER",
+  });
+
+  if (!customer) {
+    customer = await userModel.create({
+      username: `${name.replace(/\s+/g, "").toLowerCase()}_${Date.now()}`,
+      email,
+      password: Math.random().toString(36).slice(-10),
+      role: "CUSTOMER",
+      tenant: tenant._id,
+      verified: true,
+    });
+  }
+
+  const ai = await analyzeTicketMessage(description, tenant._id);
+
+  const ticket = await Ticket.create({
+    tenant: tenant._id,
+    title,
+    description,
+    channel,
+    customer: customer._id,
+    priority: ai.priority,
+    category: ai.category,
+    department: ai.recommendedDepartment,
+    ai,
+  });
+
+  await Message.create({
+    tenant: tenant._id,
+    ticket: ticket._id,
+    author: customer._id,
+    body: description,
+    visibility: "public",
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Ticket submitted successfully",
+    ticket,
+  });
+});

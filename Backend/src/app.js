@@ -7,6 +7,7 @@ import authRoutes from "./routes/auth.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import tenantRoutes from "./routes/tenant.routes.js";
 import ticketRoutes from "./routes/ticket.routes.js";
+import publicRoutes from "./routes/public.routes.js";
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/public", publicRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
