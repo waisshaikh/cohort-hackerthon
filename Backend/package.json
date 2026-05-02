@@ -9,6 +9,8 @@
     "seed:superadmin": "node scripts/seedSuperAdmin.js"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^5.0.4",
+    "axios": "^1.15.2",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
@@ -19,6 +21,7 @@
     "mongoose": "^8.13.2",
     "nodemailer": "^8.0.7",
     "resend": "^6.12.2",
+    "sib-api-v3-sdk": "^8.5.0",
     "socket.io": "^4.8.3"
   }
 }

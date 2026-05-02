@@ -18,23 +18,22 @@ const getJwtSecret = () => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
   }
-
   return process.env.JWT_SECRET;
 };
 
 export async function register(req, res) {
- const { username, email, password, tenantName } = req.body;
+  const { username, email, password, tenantName } = req.body;
 
   if (!isMongoConnected()) {
     const existingUser = memoryStore.users.find(
-      (user) => user.email === email.toLowerCase() || user.username === username,
+      (user) =>
+        user.email === email.toLowerCase() || user.username === username,
     );
 
     if (existingUser) {
       return res.status(400).json({
         message: "User with this email or username already exists",
         success: false,
-        err: "User already exists",
       });
     }
 
@@ -47,6 +46,7 @@ export async function register(req, res) {
       status: "active",
       settings: {},
     };
+
     const user = {
       id: makeId(),
       username,
@@ -57,7 +57,6 @@ export async function register(req, res) {
       verified: true,
       createdAt: new Date(),
     };
-    
 
     memoryStore.tenants.push(tenant);
     memoryStore.users.push(user);
@@ -79,9 +78,8 @@ export async function register(req, res) {
 
   if (isUserAlreadyExists) {
     return res.status(400).json({
-      message: "User with this email or username already exists",
+      message: "User already exists",
       success: false,
-      err: "User already exists",
     });
   }
 
@@ -90,31 +88,38 @@ export async function register(req, res) {
     slug: uniqueSlug(tenantName || username),
   });
 
+  const requireVerification = process.env.REQUIRE_EMAIL_VERIFICATION === "true";
+
   const user = await userModel.create({
     username,
     email,
     password,
     role: "TENANT_ADMIN",
     tenant: tenant._id,
-    verified: process.env.REQUIRE_EMAIL_VERIFICATION === "true" ? false : true,
+    verified: requireVerification ? false : true,
   });
 
-  const emailVerificationToken = jwt.sign(
-    { email: user.email },
-    getJwtSecret(),
-  );
+  // ✅ EMAIL SEND FIXED
+  if (requireVerification) {
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      getJwtSecret(),
+      { expiresIn: "1d" },
+    );
 
-  if (process.env.REQUIRE_EMAIL_VERIFICATION === "true") {
-    await sendEmail({
-      to: email,
+    const result = await sendEmail({
+      to: user.email,
       subject: "Verify your email",
       html: `
-      <h2>Verify Email</h2>
-      <a href="http://localhost:5000/api/auth/verify-email?token=${emailVerificationToken}">
-        Click to verify
-      </a>
-    `,
+        <h2>Email Verification</h2>
+        <p>Click below to verify your email:</p>
+        <a href="http://localhost:5000/api/auth/verify-email?token=${token}">
+          Verify Email
+        </a>
+      `,
     });
+
+    console.log("EMAIL RESULT:", result);
   }
 
   res.status(201).json({
@@ -135,56 +140,12 @@ export async function register(req, res) {
 }
 
 export async function login(req, res) {
-   const { email, password } = req.body;
+  const { email, password } = req.body;
   const emailNormalized = email.trim().toLowerCase();
 
- 
-  if (!isMongoConnected()) {
-    const user = memoryStore.users.find(
-      (item) => item.email === emailNormalized,
-    );
-
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(400).json({
-        message: "Invalid email or password",
-        success: false,
-      });
-    }
-
-    const token = jwt.sign(
-      {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        tenant: user.tenant,
-      },
-      getJwtSecret(),
-      { expiresIn: "7d" },
-    );
-
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
-
-    return res.status(200).json({
-      message: "Login successful",
-      success: true,
-      user: {
-        ...publicUser(user),
-        tenant: getTenant(user.tenant),
-      },
-      token,
-    });
-  }
-
-  // MONGODB LOGIN
   const user = await userModel.findOne({
     email: emailNormalized,
   });
-
-
 
   if (!user) {
     return res.status(400).json({
@@ -194,8 +155,6 @@ export async function login(req, res) {
   }
 
   const isPasswordMatch = await user.comparePassword(password);
-
-  console.log("Password Match:", isPasswordMatch);
 
   if (!isPasswordMatch) {
     return res.status(400).json({
@@ -242,54 +201,21 @@ export async function login(req, res) {
   });
 }
 
-export async function getMe(req, res) {
-  const userId = req.user.id;
-
-  if (!isMongoConnected()) {
-    const user = memoryStore.users.find((item) => item.id === userId);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-        success: false,
-      });
-    }
-
-    return res.status(200).json({
-      message: "User details fetched successfully",
-      success: true,
-      user: {
-        ...publicUser(user),
-        tenant: getTenant(user.tenant),
-      },
-    });
-  }
-
-  const user = await userModel.findById(userId)
-    .select("-password")
-    .populate("tenant", "name slug plan status settings");
-
-  if (!user) {
-    return res.status(404).json({
-      message: "User not found",
-      success: false,
-    });
-  }
-
-  res.status(200).json({
-    message: "User details fetched successfully",
-    success: true,
-    user,
-  });
-}
-
 export async function verifyEmail(req, res) {
   const { token } = req.query;
 
   try {
     const decoded = jwt.verify(token, getJwtSecret());
 
-    const user = await userModel.findOne({ email: decoded.email });
+    let user = null;
+
+    if (decoded.id) {
+      user = await userModel.findById(decoded.id);
+    }
+
+    if (!user && decoded.email) {
+      user = await userModel.findOne({ email: decoded.email });
+    }
 
     if (!user) {
       return res.status(400).json({
@@ -302,25 +228,28 @@ export async function verifyEmail(req, res) {
     await user.save();
 
     return res.send(`
-      <h1>Email Verified Successfully!</h1>
+      <h1>Email Verified Successfully</h1>
       <a href="http://localhost:3000/login">Go to Login</a>
     `);
   } catch (err) {
     return res.status(400).json({
       message: "Invalid or expired token",
       success: false,
-      err: err.message,
     });
   }
 }
 
-export default {
-  register,
-  login,
-  getMe,
-  verifyEmail,
-};
+export async function getMe(req, res) {
+  const user = await userModel
+    .findById(req.user.id)
+    .select("-password")
+    .populate("tenant", "name slug");
 
+  res.json({
+    success: true,
+    user,
+  });
+}
 
 export const inviteAgent = async (req, res) => {
   try {
@@ -365,4 +294,10 @@ export const inviteAgent = async (req, res) => {
       message: "Failed to invite agent",
     });
   }
+};
+export default {
+  register,
+  login,
+  verifyEmail,
+  getMe,
 };
