@@ -135,11 +135,15 @@ export async function register(req, res) {
 }
 
 export async function login(req, res) {
-  const { email, password } = req.body;
+  console.log("LOGIN FUNCTION HIT");
 
+  const { email, password } = req.body;
+  const emailNormalized = email.trim().toLowerCase();
+
+  // MEMORY STORE LOGIN (fallback mode)
   if (!isMongoConnected()) {
     const user = memoryStore.users.find(
-      (item) => item.email === email.toLowerCase(),
+      (item) => item.email === emailNormalized,
     );
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -177,7 +181,13 @@ export async function login(req, res) {
     });
   }
 
-  const user = await userModel.findOne({ email });
+  // MONGODB LOGIN
+  const user = await userModel.findOne({
+    email: emailNormalized,
+  });
+
+  console.log("Normalized Email:", emailNormalized);
+  console.log("Fetched User:", user);
 
   if (!user) {
     return res.status(400).json({
@@ -187,6 +197,8 @@ export async function login(req, res) {
   }
 
   const isPasswordMatch = await user.comparePassword(password);
+
+  console.log("Password Match:", isPasswordMatch);
 
   if (!isPasswordMatch) {
     return res.status(400).json({
@@ -219,7 +231,7 @@ export async function login(req, res) {
     secure: process.env.NODE_ENV === "production",
   });
 
-  res.status(200).json({
+  return res.status(200).json({
     message: "Login successful",
     success: true,
     user: {
