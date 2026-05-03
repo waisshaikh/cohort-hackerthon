@@ -9,6 +9,7 @@ import tenantRoutes from "./routes/tenant.routes.js";
 import ticketRoutes from "./routes/ticket.routes.js";
 import publicRoutes from "./routes/public.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import integrationRoutes from "./routes/integration.routes.js";
 
 const app = express();
 
@@ -18,6 +19,8 @@ const allowedOrigins = [
   "http://127.0.0.1:5173",
   "http://localhost:5174",
   "http://127.0.0.1:5174",
+  "https://zyberly.in",
+  "https://www.zyberly.in",
 ].filter(Boolean);
 
 app.use(
@@ -50,6 +53,7 @@ app.use("/api/tenants", tenantRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/public", publicRoutes);
+app.use("/api/integrations", integrationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
