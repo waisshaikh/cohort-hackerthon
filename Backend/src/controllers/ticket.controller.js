@@ -559,6 +559,10 @@ const normalizeHostname = (value) => {
 export const createPublicTicket = asyncHandler(async (req, res) => {
   const { tenantSlug } = req.params;
   const { name, email, title, description, channel = "web" } = req.body;
+  console.log("REQUEST ORIGIN:", requestOrigin);
+  console.log("INCOMING HOST:", incomingHost);
+  console.log("VERIFIED HOST:", verifiedHost);
+  console.log("ALLOWED HOSTS:", allowedHosts);
 
   if (!name || !email || !title || !description) {
     return res.status(400).json({
