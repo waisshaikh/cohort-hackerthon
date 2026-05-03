@@ -53,12 +53,11 @@ const Integrations = () => {
 
     const tenantSlug = resolvedTenantSlug || "your-tenant-slug";
     const integrationUrls = useMemo(() => {
-        const root = API_BASE_URL.replace("/api", "");
-        return {
-            widget: `${root}/widget.js?tenant=${tenantSlug}`,
-            api: `${API_BASE_URL}/public/${tenantSlug}/ticket`
-        };
-    }, [tenantSlug]);
+    return {
+        widget: `${API_BASE_URL}/public/widget.js?tenant=${tenantSlug}`,
+        api: `${API_BASE_URL}/public/${tenantSlug}/ticket`
+    };
+}, [tenantSlug]);
 
     const widgetEmbed = `<script src="${integrationUrls.widget}"></script>`;
     const templates = getCodeTemplates(integrationUrls.api);
