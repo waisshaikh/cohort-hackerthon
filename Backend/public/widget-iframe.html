@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -184,6 +185,7 @@
       from {
         transform: rotate(0deg);
       }
+
       to {
         transform: rotate(360deg);
       }
@@ -260,6 +262,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="widget-header">
     <h2>💬 Support</h2>
@@ -298,7 +301,8 @@
     <!-- Loading State -->
     <div class="state-loading" id="loadingState">
       <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="94 125" stroke-linecap="round"/>
+        <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="94 125"
+          stroke-linecap="round" />
       </svg>
       <p>Sending your message...</p>
     </div>
@@ -306,7 +310,7 @@
     <!-- Success State -->
     <div class="state-success" id="successState">
       <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" />
       </svg>
       <p class="message-text">Message sent successfully!</p>
       <p style="font-size: 13px; color: #10b981;">We'll get back to you soon.</p>
@@ -320,128 +324,136 @@
   </div>
 
   <script>
-    // Get tenant slug from URL
     const urlParams = new URLSearchParams(window.location.search);
-    const tenantSlug = urlParams.get('tenant');
+    const tenantSlug = urlParams.get("tenant");
     const apiUrl = window.location.origin;
 
-    if (!tenantSlug) {
-      document.querySelector('.empty-state').innerHTML = `
-        <div class="empty-state-icon">⚠️</div>
-        <div class="empty-state-text">Configuration error: tenant slug missing</div>
-      `;
+    const form = document.getElementById("supportForm");
+    const closeBtn = document.getElementById("closeBtn");
+    const closeFormBtn = document.getElementById("closeFormBtn");
+    const retryBtn = document.getElementById("retryBtn");
+
+    const loadingState = document.getElementById("loadingState");
+    const successState = document.getElementById("successState");
+    const errorState = document.getElementById("errorState");
+    const errorMessage = document.getElementById("errorMessage");
+
+    let closeTimeout = null;
+    let isSubmitting = false;
+
+    function clearStates() {
+      loadingState.classList.remove("active");
+      successState.classList.remove("active");
+      errorState.classList.remove("active");
+
+      if (closeTimeout) {
+        clearTimeout(closeTimeout);
+        closeTimeout = null;
+      }
     }
 
-    // Get elements
-    const form = document.getElementById('supportForm');
-    const closeBtn = document.getElementById('closeBtn');
-    const closeFormBtn = document.getElementById('closeFormBtn');
-    const submitBtn = document.getElementById('submitBtn');
-    const retryBtn = document.getElementById('retryBtn');
-    const loadingState = document.getElementById('loadingState');
-    const successState = document.getElementById('successState');
-    const errorState = document.getElementById('errorState');
-    const errorMessage = document.getElementById('errorMessage');
-
-    // Functions
     function showForm() {
-      form.style.display = 'flex';
-      loadingState.classList.remove('active');
-      successState.classList.remove('active');
-      errorState.classList.remove('active');
+      clearStates();
+      form.style.display = "flex";
     }
 
     function showLoading() {
-      form.style.display = 'none';
-      loadingState.classList.add('active');
-      successState.classList.remove('active');
-      errorState.classList.remove('active');
+      clearStates();
+      form.style.display = "none";
+      loadingState.classList.add("active");
     }
 
     function showSuccess() {
-      form.style.display = 'none';
-      loadingState.classList.remove('active');
-      successState.classList.add('active');
-      errorState.classList.remove('active');
-      setTimeout(closeWidget, 3000);
+      clearStates();
+      form.style.display = "none";
+      successState.classList.add("active");
+
+      closeTimeout = setTimeout(() => {
+        closeWidget();
+      }, 3000);
     }
 
     function showError(message) {
-      form.style.display = 'none';
-      loadingState.classList.remove('active');
-      successState.classList.remove('active');
-      errorState.classList.add('active');
-      errorMessage.textContent = message || 'Failed to send message. Please try again.';
+      clearStates();
+      form.style.display = "none";
+      errorState.classList.add("active");
+      errorMessage.textContent =
+        message || "Failed to send message. Please try again.";
     }
 
     function closeWidget() {
-      window.parent.postMessage({ type: 'close-widget' }, '*');
+      window.parent.postMessage({ type: "close-widget" }, "*");
     }
 
     function resetForm() {
+      isSubmitting = false;
       form.reset();
       showForm();
     }
 
-    // Submit form
     async function handleSubmit(e) {
       e.preventDefault();
-      
-      const name = document.getElementById('name').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const subject = document.getElementById('subject').value.trim();
-      const message = document.getElementById('message').value.trim();
+
+      if (isSubmitting) return;
+      isSubmitting = true;
+
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const subject = document.getElementById("subject").value.trim();
+      const message = document.getElementById("message").value.trim();
 
       if (!name || !email || !subject || !message) {
-        showError('Please fill in all fields');
-        return;
+        isSubmitting = false;
+        return showError("Please fill in all fields");
       }
 
       showLoading();
 
       try {
-        const response = await fetch(`${apiUrl}/api/public/${tenantSlug}/ticket`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            title: subject,
-            description: message,
-            channel: 'widget',
-          }),
-        });
+        const response = await fetch(
+          `${apiUrl}/api/public/${tenantSlug}/ticket`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name,
+              email,
+              title: subject,
+              description: message,
+              channel: "widget",
+            }),
+          }
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || 'Failed to send message');
+          throw new Error(data.message || "Failed to send message");
         }
 
         showSuccess();
       } catch (error) {
-        console.error('Widget error:', error);
-        showError(error.message || 'Failed to send message. Please try again.');
+        console.error("Widget Error:", error);
+        showError(error.message);
+      } finally {
+        isSubmitting = false;
       }
     }
 
-    // Event listeners
-    form.addEventListener('submit', handleSubmit);
-    closeBtn.addEventListener('click', closeWidget);
-    closeFormBtn.addEventListener('click', closeWidget);
-    retryBtn.addEventListener('click', resetForm);
+    form.addEventListener("submit", handleSubmit);
+    closeBtn.addEventListener("click", closeWidget);
+    closeFormBtn.addEventListener("click", closeWidget);
+    retryBtn.addEventListener("click", resetForm);
 
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeWidget();
-      }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeWidget();
     });
 
-    // Initialize
     showForm();
   </script>
+
 </body>
+
 </html>
