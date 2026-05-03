@@ -71,8 +71,10 @@ export const serveWidgetIframe = asyncHandler(async (req, res) => {
     });
   }
 
-  // Verify tenant exists and is active
-  const tenant = await Tenant.findOne({ slug: tenantSlug, status: "active" });
+  const tenant = await Tenant.findOne({
+    slug: tenantSlug,
+    status: "active",
+  });
 
   if (!tenant) {
     return res.status(404).json({
@@ -81,22 +83,21 @@ export const serveWidgetIframe = asyncHandler(async (req, res) => {
     });
   }
 
-  // Read widget iframe HTML
-  const iframePath = path.join(__dirname, "../../../public/widget-iframe.html");
-
   try {
+    const iframePath = path.resolve(process.cwd(), "public/widget-iframe.html");
+
+    console.log("IFRAME PATH:", iframePath);
+
     const iframeCode = fs.readFileSync(iframePath, "utf-8");
 
-    // Set response headers for HTML
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
 
-    // Send iframe HTML
-    res.send(iframeCode);
+    return res.send(iframeCode);
   } catch (error) {
     console.error("Widget iframe error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to load widget iframe",
