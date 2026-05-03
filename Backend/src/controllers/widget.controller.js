@@ -21,7 +21,10 @@ export const serveWidgetScript = asyncHandler(async (req, res) => {
   }
 
   // Verify tenant exists and is active
-  const tenant = await Tenant.findOne({ slug: tenantSlug, status: "active" });
+  const tenant = await Tenant.findOne({
+    slug: tenantSlug,
+    status: "active",
+  });
 
   if (!tenant) {
     return res.status(404).json({
@@ -30,27 +33,29 @@ export const serveWidgetScript = asyncHandler(async (req, res) => {
     });
   }
 
-  // Read widget.js file
-  const widgetPath = path.join(__dirname, "../../../public/widget.js");
-
   try {
+    const widgetPath = path.resolve(process.cwd(), "public/widget.js");
+
+    console.log("DIRNAME:", __dirname);
+    console.log("WIDGET PATH:", widgetPath);
+
     const widgetCode = fs.readFileSync(widgetPath, "utf-8");
 
-    // Set response headers for JavaScript
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.setHeader("Access-Control-Allow-Origin", "*");
 
-    // Send widget script
-    res.send(widgetCode);
+    return res.send(widgetCode);
   } catch (error) {
     console.error("Widget script error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Failed to load widget script",
     });
   }
 });
+
 
 /**
  * Serves the widget iframe HTML page
