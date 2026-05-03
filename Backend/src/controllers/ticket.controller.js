@@ -580,7 +580,7 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
   }
 
   // DECLARE OUTSIDE BLOCK
-  const requestOrigin = req.headers.origin || req.headers.referer || "";
+  const requestOrigin = req.body.parentDomain || "";
 
   if (
     tenant.websiteIntegration?.isVerified &&

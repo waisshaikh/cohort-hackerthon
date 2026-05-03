@@ -5,7 +5,7 @@
  * Usage: <script src="https://tenantdesk.com/widget.js?tenant=YOUR_SLUG"></script>
  */
 
-(function() {
+(function () {
   // Get tenant slug from query parameter
   const scriptTag = document.currentScript;
   const url = new URL(scriptTag.src);
@@ -17,10 +17,15 @@
   }
 
   // Widget configuration
+  const parentDomain = window.location.hostname;
+
   const config = {
     tenantSlug,
     apiUrl: url.origin,
-   iframeUrl: `${url.origin}/api/public/widget-iframe.html?tenant=${tenantSlug}`,
+    iframeUrl:
+      `${url.origin}/api/public/widget-iframe.html` +
+      `?tenant=${encodeURIComponent(tenantSlug)}` +
+      `&parentDomain=${encodeURIComponent(parentDomain)}`,
   };
 
   // Create widget styles
@@ -203,7 +208,7 @@
     backdrop.addEventListener('click', close);
 
     // Listen for close message from iframe
-    window.addEventListener('message', function(event) {
+    window.addEventListener('message', function (event) {
       if (event.origin !== config.apiUrl) return;
       if (event.data.type === 'close-widget') {
         close();
