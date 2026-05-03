@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, SlidersHorizontal, Mail, Clock, Globe } from "lucide-react";
-
-
-
+import Split from "react-split";
 import { FiRefreshCw } from "react-icons/fi";
 import { IoSparklesOutline } from "react-icons/io5";
 import { MdOutlineInsertDriveFile } from "react-icons/md";
@@ -56,6 +54,7 @@ const Ticket = () => {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [viewedTickets, setViewedTickets] = useState([]);
+  const [activeTab, setActiveTab] = useState("conversation");
 
   const loadTickets = async () => {
     setLoading(true);
@@ -102,6 +101,8 @@ const Ticket = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadTicketDetails(selectedId);
   }, [selectedId]);
+
+  
 
   const filtered = useMemo(
     () =>
@@ -189,8 +190,14 @@ const Ticket = () => {
     selectedTicket?.customer?.username || selectedTicket?.customer?.email || "Customer";
   const suggestedReply = selectedTicket?.ai?.suggestedReply || "";
 
+  useEffect(() => {
+    if (suggestedReply) {
+      setReplyText(suggestedReply);
+    }
+  }, [suggestedReply]);
+  
   return (
-    <div className="h-[calc(100vh-90px)] w-full overflow-hidden bg-[#020617] text-white flex gap-1">
+    <>
       {showForm && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
           <form
@@ -229,309 +236,343 @@ const Ticket = () => {
         </div>
       )}
 
-      <div className="resize-x overflow-auto min-w-[280px] max-w-[500px] w-[24%]">
-        <section className="h-full min-w-0 border-r border-gray-800 bg-gray-900/80 p-5 overflow-hidden">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-semibold">All Tickets ({counts.all})</h1>
-            <button onClick={loadTickets} className="p-2 rounded-lg bg-[#1E293B] text-gray-300 hover:text-white">
-              <FiRefreshCw />
-            </button>
-          </div>
-
-          {error && <Alert tone="red">{error}</Alert>}
-          {notice && <Alert tone="green">{notice}</Alert>}
-
-          <div className="flex justify-between gap-2 mb-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#1E293B] text-white outline-none border border-gray-700 focus:border-indigo-500"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-              />
-            </div>
-            <div className="p-2 bg-[#1E293B] text-gray-400 border border-gray-700 rounded-lg">
-              <SlidersHorizontal size={20} />
-            </div>
-          </div>
-
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-            {["all", "open", "pending", "resolved"].map((item) => (
-              <button
-                key={item}
-                onClick={() => setFilter(item)}
-                className={`px-3 py-2 rounded-lg text-sm capitalize whitespace-nowrap ${filter === item ? "bg-indigo-600 text-white" : "bg-[#1E293B] text-gray-400"
-                  }`}
-              >
-                {item} <span className="text-xs">{counts[item]}</span>
+      <Split
+        className="h-[calc(100vh-90px)] flex w-full overflow-hidden bg-[#020617] text-white"
+        sizes={[24, 46, 30]}
+        minSize={[280, 500, 320]}
+        gutterSize={8}
+        gutterAlign="center"
+        snapOffset={30}
+      >
+        <div className="overflow-auto min-w-[280px] ">
+          <section className="h-full min-w-0 border-r border-gray-800 bg-gray-900/80 p-5 overflow-hidden">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-xl font-semibold">All Tickets ({counts.all})</h1>
+              <button onClick={loadTickets} className="p-2 rounded-lg bg-[#1E293B] text-gray-300 hover:text-white">
+                <FiRefreshCw />
               </button>
-            ))}
-          </div>
-
-          <div className="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
-            {loading && <p className="text-sm text-gray-400">Loading tickets...</p>}
-            {!loading && filtered.length === 0 && (
-              <p className="text-sm text-gray-400">No tickets found.</p>
-            )}
-            {filtered.map((ticket) => (
-              <button
-                key={ticket._id}
-                onClick={() => {
-                  setSelectedId(ticket._id);
-
-                  setViewedTickets((prev) =>
-                    prev.includes(ticket._id)
-                      ? prev
-                      : [...prev, ticket._id]
-                  );
-                }}
-                className={`w-full text-left p-4 rounded-xl bg-[#0F172A] border flex justify-between items-start hover:border-indigo-500 transition ${selectedId === ticket._id ? "border-indigo-500 bg-indigo-500/10" : "border-gray-800"
-                  }`}
-              >
-                <div className="min-w-0 flex-1">
-                  <h2 className="font-semibold text-sm truncate">{ticket.title}</h2>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {ticket.customer?.username || user?.username || "Customer"}
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    {ticket.source && (
-                      <Badge className={`${sourceStyles[ticket.source] || "bg-gray-500/20 text-gray-300"} text-[9px]`}>
-                        {ticket.source}
-                      </Badge>
-                    )}
-                    <span className="text-[10px] text-gray-500">#{ticket._id.slice(-6).toUpperCase()}</span>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2 items-end ml-2 flex-shrink-0">
-                  <Badge className={priorityStyles[ticket.priority]}>{ticket.priority}</Badge>
-                  <Badge
-                    className={
-                      !viewedTickets.includes(ticket._id)
-                        ? "bg-purple-500/20 text-purple-300"
-                        : statusStyles[ticket.status]
-                    }
-                  >
-                    {!viewedTickets.includes(ticket._id)
-                      ? "NEW"
-                      : ticket.status}
-                  </Badge>
-                </div>
-              </button>
-            ))}
-          </div>
-        </section>
-      </div>
-  
-
-
-
-
-      <div className="flex-1 overflow-auto min-w-0">
-        <section className="h-full min-w-0 p-6 border-r border-gray-800 overflow-y-auto">
-          {!selectedTicket && (
-            <div className="h-full grid place-items-center text-gray-400">
-              Select a ticket to view details.
             </div>
-          )}
 
-          {selectedTicket && (
-            <>
-              <div className="mb-6 pb-6 border-b border-gray-800">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h1 className="text-xl font-bold text-white mb-2">
-                      {selectedTicket.title}
-                    </h1>
-                    <p className="text-sm text-gray-400">
-                      Ticket #{selectedTicket._id.slice(-6).toUpperCase()}
-                    </p>
-                  </div>
-                  <Badge className={`${priorityStyles[selectedTicket.priority]}`}>
-                    {selectedTicket.priority}
-                  </Badge>
-                </div>
+            {error && <Alert tone="red">{error}</Alert>}
+            {notice && <Alert tone="green">{notice}</Alert>}
 
-                {/* Customer Info Card */}
-                <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/20 rounded-lg p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-purple-300">
-                    <Globe size={16} />
-                    <span className="text-sm font-semibold">Contact Information</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 text-sm">Name:</span>
-                      <span className="text-white font-medium">{selectedTicket.customer?.username || "Customer"}</span>
-                    </div>
-                    {selectedTicket.customer?.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail size={14} className="text-gray-500" />
-                        <span className="text-gray-300 text-sm break-all">{selectedTicket.customer.email}</span>
-                      </div>
-                    )}
-                    {selectedTicket.source && (
-                      <div className="flex items-center gap-2 mt-3">
-                        <span className="text-gray-500 text-sm">Source:</span>
-                        <Badge className={`${sourceStyles[selectedTicket.source] || "bg-gray-500/20 text-gray-300"} text-[10px]`}>
-                          {selectedTicket.source}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                <InfoCard label="Status" value={selectedTicket.status} />
-                <InfoCard label="Category" value={selectedTicket.category} />
-                <InfoCard label="Department" value={selectedTicket.department} />
-                <InfoCard
-                  label="Created"
-                  value={selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleDateString() : "-"}
-                />
-              </div>
-
-              <div className="flex gap-3 mb-5">
-                {["open", "pending", "resolved", "closed"].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => updateStatus(status)}
-                    className={`px-3 py-2 rounded-lg text-xs capitalize ${selectedTicket.status === status ? "bg-indigo-600" : "bg-[#1E293B] text-gray-300"
-                      }`}
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-
-              <div className="space-y-4 mb-6 max-h-[45vh] overflow-y-auto pr-2">
-                {detailLoading && <p className="text-sm text-gray-400">Loading conversation...</p>}
-                {messages.map((message) => (
-                  <div
-                    key={message._id}
-                    className={`p-4 rounded-xl max-w-full ${message.author?._id === user?.id || message.author === user?.id
-                      ? "bg-[#1E293B] ml-auto"
-                      : "bg-[#0F172A]"
-                      }`}
-                  >
-                    <p className="text-xs text-gray-400 mb-1">
-                      {message.author?.username || selectedCustomer}
-                    </p>
-                    <p className="text-sm whitespace-pre-wrap">{message.body}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="bg-[#0F172A] p-4 rounded-xl border border-gray-800 flex items-center gap-3 sticky bottom-0">
+            <div className="flex justify-between gap-2 mb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="text"
-                  placeholder="Type your message..."
-                  value={replyText}
-                  onChange={(event) => setReplyText(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") sendMessage();
-                  }}
-                  className="flex-1 bg-transparent outline-none text-sm"
+                  placeholder="Search..."
+                  className="w-full pl-10 pr-4 py-2 rounded-lg bg-[#1E293B] text-white outline-none border border-gray-700 focus:border-indigo-500"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
-                <button onClick={sendMessage} className="bg-indigo-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-                  Send
-                </button>
               </div>
-            </>
-          )}
-        </section>
-      </div>
-    
-
-
-
-      <div className="resize-x overflow-auto min-w-[320px] max-w-[500px] w-[30%]">
-        <aside className="h-full min-w-0 bg-[#0b1120] p-6 overflow-y-auto">
-          <div className="flex justify-end mb-6">
-            <button onClick={() => setShowForm(true)} className="bg-gradient-to-r from-purple-500 to-indigo-500 px-4 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition shadow-lg shadow-indigo-500/20">
-              + NEW TICKET
-            </button>
-          </div>
-
-          <div className="bg-[#0f172a] border border-gray-800 rounded-2xl p-5 space-y-6 shadow-xl">
-            <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
-              <IoSparklesOutline /> AI Assistant
-              <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded-full uppercase">Live</span>
+              <div className="p-2 bg-[#1E293B] text-gray-400 border border-gray-700 rounded-lg">
+                <SlidersHorizontal size={20} />
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-purple-400 text-sm font-medium">
-                <IoSparklesOutline /> Suggested Reply
-              </div>
-              <div className="bg-[#020617] border border-gray-800 rounded-xl p-4 text-sm text-gray-300 leading-relaxed whitespace-pre-wrap min-h-32">
-                {suggestedReply || "Select or create a ticket to generate an AI reply."}
-              </div>
-              <div className="flex gap-2">
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+              {["all", "open", "pending", "resolved"].map((item) => (
                 <button
-                  onClick={() => setReplyText(suggestedReply)}
-                  disabled={!suggestedReply}
-                  className="flex-1 bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-indigo-600/30 transition disabled:opacity-40"
+                  key={item}
+                  onClick={() => setFilter(item)}
+                  className={`px-3 py-2 rounded-lg text-sm capitalize whitespace-nowrap ${filter === item ? "bg-indigo-600 text-white" : "bg-[#1E293B] text-gray-400"
+                    }`}
                 >
-                  <MdOutlineInsertDriveFile /> INSERT
+                  {item} <span className="text-xs">{counts[item]}</span>
                 </button>
+              ))}
+            </div>
+
+            <div className="space-y-3 max-h-[calc(100vh-250px)] overflow-y-auto pr-1">
+              {loading && <p className="text-sm text-gray-400">Loading tickets...</p>}
+              {!loading && filtered.length === 0 && (
+                <p className="text-sm text-gray-400">No tickets found.</p>
+              )}
+              {filtered.map((ticket) => (
                 <button
-                  onClick={refreshSuggestion}
-                  disabled={!selectedTicket}
-                  className="flex-1 border border-gray-800 text-gray-400 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 hover:bg-gray-800 transition disabled:opacity-40"
+                  key={ticket._id}
+                  onClick={() => {
+                    setSelectedId(ticket._id);
+
+                    setViewedTickets((prev) =>
+                      prev.includes(ticket._id)
+                        ? prev
+                        : [...prev, ticket._id]
+                    );
+                  }}
+                  className={`w-full text-left p-4 rounded-xl bg-[#0F172A] border flex justify-between items-start hover:border-indigo-500 transition ${selectedId === ticket._id ? "border-indigo-500 bg-indigo-500/10" : "border-gray-800"
+                    }`}
                 >
-                  <FiRefreshCw /> REGEN
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-semibold text-sm truncate">{ticket.title}</h2>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {ticket.customer?.username || user?.username || "Customer"}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      {ticket.source && (
+                        <Badge className={`${sourceStyles[ticket.source] || "bg-gray-500/20 text-gray-300"} text-[9px]`}>
+                          {ticket.source}
+                        </Badge>
+                      )}
+                      <span className="text-[10px] text-gray-500">#{ticket._id.slice(-6).toUpperCase()}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 items-end ml-2 flex-shrink-0">
+                    <Badge className={priorityStyles[ticket.priority]}>{ticket.priority}</Badge>
+                    <Badge
+                      className={
+                        !viewedTickets.includes(ticket._id)
+                          ? "bg-purple-500/20 text-purple-300"
+                          : statusStyles[ticket.status]
+                      }
+                    >
+                      {!viewedTickets.includes(ticket._id)
+                        ? "NEW"
+                        : ticket.status}
+                    </Badge>
+                  </div>
                 </button>
+              ))}
+            </div>
+          </section>
+        </div>
+
+
+
+
+
+        <div className="overflow-auto min-w-[500px]">
+          <section className="h-full min-w-0 p-6 border-r border-gray-800 overflow-y-auto">
+            {!selectedTicket && (
+              <div className="h-full grid place-items-center text-gray-400">
+                Select a ticket to view details.
+              </div>
+            )}
+
+            {selectedTicket && (
+              <>
+                <div className="mb-6 pb-6 border-b border-gray-800">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h1 className="text-xl font-bold text-white mb-2">
+                        {selectedTicket.title}
+                      </h1>
+                      <p className="text-sm text-gray-400">
+                        Ticket #{selectedTicket._id.slice(-6).toUpperCase()}
+                      </p>
+                    </div>
+                    <Badge className={`${priorityStyles[selectedTicket.priority]}`}>
+                      {selectedTicket.priority}
+                    </Badge>
+                  </div>
+
+                  {/* Customer Info Card */}
+                  <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/20 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-purple-300">
+                      <Globe size={16} />
+                      <span className="text-sm font-semibold">Contact Information</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500 text-sm">Name:</span>
+                        <span className="text-white font-medium">{selectedTicket.customer?.username || "Customer"}</span>
+                      </div>
+                      {selectedTicket.customer?.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail size={14} className="text-gray-500" />
+                          <span className="text-gray-300 text-sm break-all">{selectedTicket.customer.email}</span>
+                        </div>
+                      )}
+                      {selectedTicket.source && (
+                        <div className="flex items-center gap-2 mt-3">
+                          <span className="text-gray-500 text-sm">Source:</span>
+                          <Badge className={`${sourceStyles[selectedTicket.source] || "bg-gray-500/20 text-gray-300"} text-[10px]`}>
+                            {selectedTicket.source}
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <InfoCard label="Status" value={selectedTicket.status} />
+                  <InfoCard label="Category" value={selectedTicket.category} />
+                  <InfoCard label="Department" value={selectedTicket.department} />
+                  <InfoCard
+                    label="Created"
+                    value={selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleDateString() : "-"}
+                  />
+                </div>
+
+                <div className="flex gap-3 mb-5">
+                  {["open", "pending", "resolved", "closed"].map((status) => (
+                    <button
+                      key={status}
+                      onClick={() => updateStatus(status)}
+                      className={`px-3 py-2 rounded-lg text-xs capitalize ${selectedTicket.status === status ? "bg-indigo-600" : "bg-[#1E293B] text-gray-300"
+                        }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+
+<div className="flex gap-2 mb-4">
+                  {["conversation", "notes", "activity"].map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={`px-4 py-2 rounded-lg text-xs font-medium capitalize transition ${activeTab === tab
+                        ? "bg-indigo-600 text-white"
+                        : "bg-[#1E293B] text-gray-400 hover:text-white"
+                        }`}
+                    >
+                      {tab}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mb-6 max-h-[45vh] overflow-y-auto pr-2">
+                  {activeTab === "conversation" && (
+                    <div className="space-y-4">
+                      {detailLoading && (
+                        <p className="text-sm text-gray-400">Loading conversation...</p>
+                      )}
+
+                      {messages.map((message) => (
+                        <div
+                          key={message._id}
+                          className={`p-4 rounded-xl max-w-full ${message.author?._id === user?.id || message.author === user?.id
+                            ? "bg-[#1E293B] ml-auto"
+                            : "bg-[#0F172A]"
+                            }`}
+                        >
+                          <p className="text-xs text-gray-400 mb-1">
+                            {message.author?.username || selectedCustomer}
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap">{message.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeTab === "notes" && (
+                    <div className="bg-[#0F172A] rounded-xl p-4 border border-gray-800 text-sm text-gray-400">
+                      Internal notes coming soon...
+                    </div>
+                  )}
+
+                  {activeTab === "activity" && (
+                    <div className="bg-[#0F172A] rounded-xl p-4 border border-gray-800 text-sm text-gray-400">
+                      Activity log coming soon...
+                    </div>
+                  )}
+                </div>
+
+              
+              </>
+            )}
+          </section>
+        </div>
+
+
+
+
+        <div className="overflow-auto min-w-[320px]">
+          <aside className="h-full min-w-0 bg-[#0b1120] p-6 overflow-y-auto">
+            
+
+            <div className="bg-[#0f172a] border border-gray-800 rounded-2xl p-5 space-y-6 shadow-xl">
+              <div className="flex items-center gap-2 text-indigo-400 font-semibold text-sm">
+                <IoSparklesOutline /> AI Assistant
+                <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded-full uppercase">Live</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-purple-400 text-sm font-medium">
+                  <IoSparklesOutline /> Suggested Reply
+                </div>
+
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="AI suggestion will appear here..."
+                  className="w-full min-h-40 bg-[#020617] border border-gray-800 rounded-xl p-4 text-sm text-gray-300 outline-none resize-none focus:border-indigo-500"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={refreshSuggestion}
+                    disabled={!selectedTicket}
+                    className="flex-1 border border-gray-800 text-gray-400 py-2 rounded-lg text-[10px] font-bold hover:bg-gray-800 transition disabled:opacity-40"
+                  >
+                    <FiRefreshCw className="inline mr-1" />
+                    REGENERATE
+                  </button>
+
+                  <button
+                    onClick={sendMessage}
+                    disabled={!replyText.trim()}
+                    className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition disabled:opacity-40"
+                  >
+                    SEND REPLY
+                  </button>
+                </div>
+
+              </div>
+
+              <div className="pt-4 border-t border-gray-800 space-y-3">
+                <h3 className="text-xs font-bold text-gray-500 uppercase">AI Classification</h3>
+                <InfoCard label="Sentiment" value={selectedTicket?.ai?.sentiment || "-"} />
+                <InfoCard label="Summary" value={selectedTicket?.ai?.summary || "-"} />
               </div>
             </div>
+          </aside>
+        </div>
 
-            <div className="pt-4 border-t border-gray-800 space-y-3">
-              <h3 className="text-xs font-bold text-gray-500 uppercase">AI Classification</h3>
-              <InfoCard label="Sentiment" value={selectedTicket?.ai?.sentiment || "-"} />
-              <InfoCard label="Summary" value={selectedTicket?.ai?.summary || "-"} />
-            </div>
-          </div>
-                </aside>
-      </div>
+      </Split>
 
-    </div>
+    </>
   );
 };
 
-      const Alert = ({children, tone}) => (
-      <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${tone === "red"
-        ? "border-red-500/30 bg-red-500/10 text-red-300"
-        : "border-green-500/30 bg-green-500/10 text-green-300"
-        }`}>
-        {children}
-      </div>
-      );
+const Alert = ({ children, tone }) => (
+  <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${tone === "red"
+    ? "border-red-500/30 bg-red-500/10 text-red-300"
+    : "border-green-500/30 bg-green-500/10 text-green-300"
+    }`}>
+    {children}
+  </div>
+);
 
-      const Badge = ({children, className = ""}) => (
-      <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${className}`}>
-        {children}
-      </span>
-      );
+const Badge = ({ children, className = "" }) => (
+  <span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${className}`}>
+    {children}
+  </span>
+);
 
-      const InfoCard = ({label, value}) => (
-      <div className="bg-[#0F172A] p-3 rounded-lg border border-gray-800 min-w-0">
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-sm truncate">{value}</p>
-      </div>
-      );
+const InfoCard = ({ label, value }) => (
+  <div className="bg-[#0F172A] p-3 rounded-lg border border-gray-800 min-w-0">
+    <p className="text-xs text-gray-400">{label}</p>
+    <p className="text-sm truncate">{value}</p>
+  </div>
+);
 
-      const TextInput = ({label, value, onChange, placeholder}) => (
-      <div className="space-y-2">
-        <label className="text-sm text-gray-400">{label}</label>
-        <input
-          required
-          type="text"
-          placeholder={placeholder}
-          className="w-full p-3 bg-[#1E293B] text-white rounded-lg outline-none border border-transparent focus:border-indigo-500"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      </div>
-      );
+const TextInput = ({ label, value, onChange, placeholder }) => (
+  <div className="space-y-2">
+    <label className="text-sm text-gray-400">{label}</label>
+    <input
+      required
+      type="text"
+      placeholder={placeholder}
+      className="w-full p-3 bg-[#1E293B] text-white rounded-lg outline-none border border-transparent focus:border-indigo-500"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  </div>
+);
 
-      export default Ticket;
+export default Ticket;

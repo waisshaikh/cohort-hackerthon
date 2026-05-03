@@ -22,3 +22,26 @@
     scrollbar-width: none;  /* Firefox */
   }
 }
+
+.gutter {
+  background: #1e293b;
+  cursor: col-resize;
+  transition: 0.2s ease;
+  position: relative;
+}
+
+.gutter:hover {
+  background: #7c3aed;
+}
+
+.gutter::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 36px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.15);
+  transform: translate(-50%, -50%);
+}
