@@ -23,7 +23,12 @@ import {
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const canAccessTicket = (user, ticket) => {
-  if (["admin", "agent", "superadmin"].includes(user.role)) return true;
+  if (
+    ["SUPER_ADMIN", "TENANT_ADMIN", "AGENT"].includes(user.role)
+  ) {
+    return true;
+  }
+
   return String(ticket.customer) === String(user.id);
 };
 

@@ -52,6 +52,7 @@ const Ticket = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [viewedTickets, setViewedTickets] = useState([]);
 
   const loadTickets = async () => {
     setLoading(true);
@@ -257,9 +258,8 @@ const Ticket = () => {
             <button
               key={item}
               onClick={() => setFilter(item)}
-              className={`px-3 py-2 rounded-lg text-sm capitalize whitespace-nowrap ${
-                filter === item ? "bg-indigo-600 text-white" : "bg-[#1E293B] text-gray-400"
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm capitalize whitespace-nowrap ${filter === item ? "bg-indigo-600 text-white" : "bg-[#1E293B] text-gray-400"
+                }`}
             >
               {item} <span className="text-xs">{counts[item]}</span>
             </button>
@@ -274,10 +274,17 @@ const Ticket = () => {
           {filtered.map((ticket) => (
             <button
               key={ticket._id}
-              onClick={() => setSelectedId(ticket._id)}
-              className={`w-full text-left p-4 rounded-xl bg-[#0F172A] border flex justify-between items-start hover:border-indigo-500 transition ${
-                selectedId === ticket._id ? "border-indigo-500 bg-indigo-500/10" : "border-gray-800"
-              }`}
+              onClick={() => {
+                setSelectedId(ticket._id);
+
+                setViewedTickets((prev) =>
+                  prev.includes(ticket._id)
+                    ? prev
+                    : [...prev, ticket._id]
+                );
+              }}
+              className={`w-full text-left p-4 rounded-xl bg-[#0F172A] border flex justify-between items-start hover:border-indigo-500 transition ${selectedId === ticket._id ? "border-indigo-500 bg-indigo-500/10" : "border-gray-800"
+                }`}
             >
               <div className="min-w-0 flex-1">
                 <h2 className="font-semibold text-sm truncate">{ticket.title}</h2>
@@ -295,7 +302,17 @@ const Ticket = () => {
               </div>
               <div className="flex flex-col gap-2 items-end ml-2 flex-shrink-0">
                 <Badge className={priorityStyles[ticket.priority]}>{ticket.priority}</Badge>
-                <Badge className={statusStyles[ticket.status]}>{ticket.status}</Badge>
+                <Badge
+                  className={
+                    !viewedTickets.includes(ticket._id)
+                      ? "bg-purple-500/20 text-purple-300"
+                      : statusStyles[ticket.status]
+                  }
+                >
+                  {!viewedTickets.includes(ticket._id)
+                    ? "NEW"
+                    : ticket.status}
+                </Badge>
               </div>
             </button>
           ))}
@@ -359,8 +376,8 @@ const Ticket = () => {
               <InfoCard label="Status" value={selectedTicket.status} />
               <InfoCard label="Category" value={selectedTicket.category} />
               <InfoCard label="Department" value={selectedTicket.department} />
-              <InfoCard 
-                label="Created" 
+              <InfoCard
+                label="Created"
                 value={selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleDateString() : "-"}
               />
             </div>
@@ -370,9 +387,8 @@ const Ticket = () => {
                 <button
                   key={status}
                   onClick={() => updateStatus(status)}
-                  className={`px-3 py-2 rounded-lg text-xs capitalize ${
-                    selectedTicket.status === status ? "bg-indigo-600" : "bg-[#1E293B] text-gray-300"
-                  }`}
+                  className={`px-3 py-2 rounded-lg text-xs capitalize ${selectedTicket.status === status ? "bg-indigo-600" : "bg-[#1E293B] text-gray-300"
+                    }`}
                 >
                   {status}
                 </button>
@@ -384,11 +400,10 @@ const Ticket = () => {
               {messages.map((message) => (
                 <div
                   key={message._id}
-                  className={`p-4 rounded-xl max-w-full ${
-                    message.author?._id === user?.id || message.author === user?.id
-                      ? "bg-[#1E293B] ml-auto"
-                      : "bg-[#0F172A]"
-                  }`}
+                  className={`p-4 rounded-xl max-w-full ${message.author?._id === user?.id || message.author === user?.id
+                    ? "bg-[#1E293B] ml-auto"
+                    : "bg-[#0F172A]"
+                    }`}
                 >
                   <p className="text-xs text-gray-400 mb-1">
                     {message.author?.username || selectedCustomer}
@@ -467,11 +482,10 @@ const Ticket = () => {
 };
 
 const Alert = ({ children, tone }) => (
-  <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${
-    tone === "red"
-      ? "border-red-500/30 bg-red-500/10 text-red-300"
-      : "border-green-500/30 bg-green-500/10 text-green-300"
-  }`}>
+  <div className={`mb-4 rounded-lg border px-3 py-2 text-sm ${tone === "red"
+    ? "border-red-500/30 bg-red-500/10 text-red-300"
+    : "border-green-500/30 bg-green-500/10 text-green-300"
+    }`}>
     {children}
   </div>
 );
