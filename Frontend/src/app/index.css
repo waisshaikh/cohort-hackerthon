@@ -3,3 +3,11 @@
 .messages::-webkit-scrollbar {
     display: none;
 }
+@layer base {
+  body {
+    @apply bg-white text-slate-900 transition-colors duration-300;
+  }
+  .dark body {
+    @apply bg-[#020617] text-slate-100;
+  }
+}

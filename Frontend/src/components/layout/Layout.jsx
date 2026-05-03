@@ -11,7 +11,7 @@ const Layout = ({ children }) => {
 
       <div className="flex-1 flex flex-col">
         <Topbar />
-        <div className="p-4 flex-1 overflow-auto h-full overflow-y-auto custom-scrollbar ">
+        <div className="flex-1 overflow-auto h-full overflow-y-auto custom-scrollbar ">
           <Outlet/>
           </div>
       </div>
