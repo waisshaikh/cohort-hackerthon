@@ -541,6 +541,21 @@ export default {
   suggestReply,
 };
 
+const normalizeHostname = (value) => {
+  if (!value) return null;
+
+  try {
+    const url =
+      value.startsWith("http://") || value.startsWith("https://")
+        ? new URL(value)
+        : new URL(`https://${value}`);
+
+    return url.hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return null;
+  }
+};
+
 export const createPublicTicket = asyncHandler(async (req, res) => {
   const { tenantSlug } = req.params;
   const { name, email, title, description, channel = "web" } = req.body;
@@ -554,12 +569,37 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
 
   const tenant = await Tenant.findOne({ slug: tenantSlug, status: "active" });
 
-  if (!tenant) {
-    return res.status(404).json({
+ if (
+  tenant.websiteIntegration?.isVerified &&
+  tenant.websiteIntegration?.domain
+) {
+  const requestOrigin =
+    req.headers.origin || req.headers.referer || "";
+
+  const incomingHost = normalizeHostname(requestOrigin);
+  const verifiedHost = normalizeHostname(
+    tenant.websiteIntegration.domain
+  );
+
+  if (!incomingHost || !verifiedHost) {
+    return res.status(403).json({
       success: false,
-      message: "Tenant not found",
+      message: "Unable to validate request domain",
     });
   }
+
+  const allowedHosts = [
+    verifiedHost,
+    `www.${verifiedHost}`,
+  ].map((host) => host.replace(/^www\./, ""));
+
+  if (!allowedHosts.includes(incomingHost)) {
+    return res.status(403).json({
+      success: false,
+      message: "Unauthorized domain for this widget",
+    });
+  }
+}
 
   let customer = await userModel.findOne({
     email,
