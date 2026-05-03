@@ -1,10 +1,23 @@
 import { Search } from "lucide-react";
-
 import { useAuth } from "../../features/auth/AuthContext";
 import Tabs from "../../Project/Tabs";
 
 const Topbar = () => {
   const { user, logout } = useAuth();
+
+  const getFirstLetter = (name) => {
+    return name?.charAt(0).toUpperCase() || "U";
+  };
+
+  const getColor = (name = "") => {
+    const colors = [
+      "bg-red-500",
+      "bg-green-500",
+      "bg-blue-500",
+      "bg-yellow-500",
+    ];
+    return colors[name.charCodeAt(0) % colors.length];
+  };
 
   return (
     <div className="bg-[#0F172A] border-b border-gray-800 p-3 flex justify-end gap-4">
@@ -13,7 +26,10 @@ const Topbar = () => {
       </div>
 
       <div className="relative max-w-64">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          size={18}
+        />
         <input
           type="text"
           placeholder="Search anything..."
@@ -25,7 +41,16 @@ const Topbar = () => {
         <span className="max-w-36 truncate text-sm text-gray-300">
           {user?.username}
         </span>
-        <img src="https://i.pravatar.cc/40" className="rounded-full w-8 h-8" />
+
+        {/* Avatar */}
+        <div
+          className={`w-8 h-8 rounded-full text-white flex items-center justify-center text-sm font-bold ${getColor(
+            user?.username,
+          )}`}
+        >
+          {getFirstLetter(user?.username)}
+        </div>
+
         <button
           onClick={logout}
           className="rounded-lg bg-[#1E293B] px-3 py-2 text-xs text-gray-200 hover:bg-slate-700"
