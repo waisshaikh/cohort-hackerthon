@@ -45,6 +45,36 @@ const tenantSchema = new mongoose.Schema(
         critical: { type: Number, default: 4 },
       },
     },
+    websiteIntegration: {
+  domain: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: "",
+  },
+  verificationToken: {
+    type: String,
+    default: "",
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  verifiedAt: {
+    type: Date,
+    default: null,
+  },
+  connectionMethod: {
+    type: String,
+    enum: ["DNS", "CMS", ""],
+    default: "",
+  },
+  cmsType: {
+    type: String,
+    enum: ["WORDPRESS", "SHOPIFY", "WIX", "WEBFLOW", "FRAMER", "CUSTOM", ""],
+    default: "",
+  },
+},
   },
   { timestamps: true },
 );

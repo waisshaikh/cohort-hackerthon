@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, Mail, Clock, Globe } from "lucide-react";
 import { FiRefreshCw } from "react-icons/fi";
 import { IoSparklesOutline } from "react-icons/io5";
 import { MdOutlineInsertDriveFile } from "react-icons/md";
@@ -19,6 +19,16 @@ const statusStyles = {
   pending: "bg-yellow-500/20 text-yellow-300",
   resolved: "bg-green-500/20 text-green-300",
   closed: "bg-slate-500/20 text-slate-300",
+};
+
+const sourceStyles = {
+  WEBSITE: "bg-blue-500/20 text-blue-300",
+  WHATSAPP: "bg-green-500/20 text-green-300",
+  EMAIL: "bg-purple-500/20 text-purple-300",
+  LIVE_CHAT: "bg-indigo-500/20 text-indigo-300",
+  INSTAGRAM: "bg-pink-500/20 text-pink-300",
+  PHONE: "bg-orange-500/20 text-orange-300",
+  WIDGET: "bg-indigo-500/20 text-indigo-300",
 };
 
 const emptyForm = {
@@ -266,17 +276,24 @@ const Ticket = () => {
               key={ticket._id}
               onClick={() => setSelectedId(ticket._id)}
               className={`w-full text-left p-4 rounded-xl bg-[#0F172A] border flex justify-between items-start hover:border-indigo-500 transition ${
-                selectedId === ticket._id ? "border-indigo-500" : "border-gray-800"
+                selectedId === ticket._id ? "border-indigo-500 bg-indigo-500/10" : "border-gray-800"
               }`}
             >
-              <div className="min-w-0">
-                <h2 className="font-medium text-sm truncate">{ticket.title}</h2>
+              <div className="min-w-0 flex-1">
+                <h2 className="font-semibold text-sm truncate">{ticket.title}</h2>
                 <p className="text-xs text-gray-400 mt-1">
                   {ticket.customer?.username || user?.username || "Customer"}
                 </p>
-                <p className="text-[10px] text-gray-500 mt-1">#{ticket._id.slice(-6).toUpperCase()}</p>
+                <div className="flex gap-2 mt-2">
+                  {ticket.source && (
+                    <Badge className={`${sourceStyles[ticket.source] || "bg-gray-500/20 text-gray-300"} text-[9px]`}>
+                      {ticket.source}
+                    </Badge>
+                  )}
+                  <span className="text-[10px] text-gray-500">#{ticket._id.slice(-6).toUpperCase()}</span>
+                </div>
               </div>
-              <div className="flex flex-col gap-2 items-end">
+              <div className="flex flex-col gap-2 items-end ml-2 flex-shrink-0">
                 <Badge className={priorityStyles[ticket.priority]}>{ticket.priority}</Badge>
                 <Badge className={statusStyles[ticket.status]}>{ticket.status}</Badge>
               </div>
@@ -294,23 +311,58 @@ const Ticket = () => {
 
         {selectedTicket && (
           <>
-            <div className="mb-5">
-              <h1 className="text-lg font-semibold">
-                {selectedTicket.title}
-                <Badge className={`ml-3 ${priorityStyles[selectedTicket.priority]}`}>
+            <div className="mb-6 pb-6 border-b border-gray-800">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <h1 className="text-xl font-bold text-white mb-2">
+                    {selectedTicket.title}
+                  </h1>
+                  <p className="text-sm text-gray-400">
+                    Ticket #{selectedTicket._id.slice(-6).toUpperCase()}
+                  </p>
+                </div>
+                <Badge className={`${priorityStyles[selectedTicket.priority]}`}>
                   {selectedTicket.priority}
                 </Badge>
-              </h1>
-              <p className="text-sm text-gray-400">
-                Ticket #{selectedTicket._id.slice(-6).toUpperCase()} · Via {selectedTicket.channel}
-              </p>
+              </div>
+
+              {/* Customer Info Card */}
+              <div className="bg-gradient-to-br from-purple-900/20 to-indigo-900/20 border border-purple-500/20 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2 text-purple-300">
+                  <Globe size={16} />
+                  <span className="text-sm font-semibold">Contact Information</span>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">Name:</span>
+                    <span className="text-white font-medium">{selectedTicket.customer?.username || "Customer"}</span>
+                  </div>
+                  {selectedTicket.customer?.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail size={14} className="text-gray-500" />
+                      <span className="text-gray-300 text-sm break-all">{selectedTicket.customer.email}</span>
+                    </div>
+                  )}
+                  {selectedTicket.source && (
+                    <div className="flex items-center gap-2 mt-3">
+                      <span className="text-gray-500 text-sm">Source:</span>
+                      <Badge className={`${sourceStyles[selectedTicket.source] || "bg-gray-500/20 text-gray-300"} text-[10px]`}>
+                        {selectedTicket.source}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-2 gap-3 mb-6">
               <InfoCard label="Status" value={selectedTicket.status} />
               <InfoCard label="Category" value={selectedTicket.category} />
-              <InfoCard label="Team" value={selectedTicket.department} />
-              <InfoCard label="Customer" value={selectedCustomer} />
+              <InfoCard label="Department" value={selectedTicket.department} />
+              <InfoCard 
+                label="Created" 
+                value={selectedTicket.createdAt ? new Date(selectedTicket.createdAt).toLocaleDateString() : "-"}
+              />
             </div>
 
             <div className="flex gap-3 mb-5">

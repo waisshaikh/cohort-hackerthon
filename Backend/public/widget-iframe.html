@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TenantDesk Support Widget</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      margin: 0;
+    }
+
+    .widget-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .widget-header h2 {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .widget-close {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: background 0.2s;
+    }
+
+    .widget-close:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .widget-content {
+      flex: 1;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .widget-form {
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-group textarea {
+      flex: 1;
+      min-height: 100px;
+      max-height: 150px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      flex: 2;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-close {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-close:hover {
+      background: #e0e0e0;
+    }
+
+    .state-loading,
+    .state-success,
+    .state-error {
+      display: none;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 24px;
+    }
+
+    .state-loading.active,
+    .state-success.active,
+    .state-error.active {
+      display: flex;
+    }
+
+    .state-loading svg {
+      width: 48px;
+      height: 48px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+      color: #667eea;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .state-success {
+      color: #10b981;
+    }
+
+    .state-success svg {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+    }
+
+    .state-error {
+      color: #ef4444;
+    }
+
+    .state-error p {
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .message-text {
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(102, 126, 234, 0.2);
+      border-radius: 50%;
+      border-top-color: #667eea;
+      animation: spin 0.8s linear infinite;
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: #999;
+      padding: 40px 24px;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    .empty-state-text {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    @media (max-height: 500px) {
+      .widget-form {
+        padding: 16px;
+      }
+
+      .form-group {
+        margin-bottom: 12px;
+      }
+
+      .form-group textarea {
+        min-height: 60px;
+        max-height: 100px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-header">
+    <h2>💬 Support</h2>
+    <button class="widget-close" id="closeBtn">&times;</button>
+  </div>
+
+  <div class="widget-content">
+    <!-- Form State -->
+    <form class="widget-form" id="supportForm">
+      <div class="form-group">
+        <label for="name">Your Name</label>
+        <input type="text" id="name" name="name" placeholder="John Doe" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email Address</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required>
+      </div>
+
+      <div class="form-group">
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" name="subject" placeholder="How can we help?" required>
+      </div>
+
+      <div class="form-group">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" placeholder="Tell us what's on your mind..." required></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-close" id="closeFormBtn">Close</button>
+        <button type="submit" class="btn btn-submit" id="submitBtn">Send Message</button>
+      </div>
+    </form>
+
+    <!-- Loading State -->
+    <div class="state-loading" id="loadingState">
+      <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="25" cy="25" r="20" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="94 125" stroke-linecap="round"/>
+      </svg>
+      <p>Sending your message...</p>
+    </div>
+
+    <!-- Success State -->
+    <div class="state-success" id="successState">
+      <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+      </svg>
+      <p class="message-text">Message sent successfully!</p>
+      <p style="font-size: 13px; color: #10b981;">We'll get back to you soon.</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="state-error" id="errorState">
+      <p class="message-text" id="errorMessage">Failed to send message. Please try again.</p>
+      <button type="button" class="btn btn-submit" id="retryBtn" style="flex: 0 1 auto;">Try Again</button>
+    </div>
+  </div>
+
+  <script>
+    // Get tenant slug from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const tenantSlug = urlParams.get('tenant');
+    const apiUrl = window.location.origin;
+
+    if (!tenantSlug) {
+      document.querySelector('.empty-state').innerHTML = `
+        <div class="empty-state-icon">⚠️</div>
+        <div class="empty-state-text">Configuration error: tenant slug missing</div>
+      `;
+    }
+
+    // Get elements
+    const form = document.getElementById('supportForm');
+    const closeBtn = document.getElementById('closeBtn');
+    const closeFormBtn = document.getElementById('closeFormBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const retryBtn = document.getElementById('retryBtn');
+    const loadingState = document.getElementById('loadingState');
+    const successState = document.getElementById('successState');
+    const errorState = document.getElementById('errorState');
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Functions
+    function showForm() {
+      form.style.display = 'flex';
+      loadingState.classList.remove('active');
+      successState.classList.remove('active');
+      errorState.classList.remove('active');
+    }
+
+    function showLoading() {
+      form.style.display = 'none';
+      loadingState.classList.add('active');
+      successState.classList.remove('active');
+      errorState.classList.remove('active');
+    }
+
+    function showSuccess() {
+      form.style.display = 'none';
+      loadingState.classList.remove('active');
+      successState.classList.add('active');
+      errorState.classList.remove('active');
+      setTimeout(closeWidget, 3000);
+    }
+
+    function showError(message) {
+      form.style.display = 'none';
+      loadingState.classList.remove('active');
+      successState.classList.remove('active');
+      errorState.classList.add('active');
+      errorMessage.textContent = message || 'Failed to send message. Please try again.';
+    }
+
+    function closeWidget() {
+      window.parent.postMessage({ type: 'close-widget' }, '*');
+    }
+
+    function resetForm() {
+      form.reset();
+      showForm();
+    }
+
+    // Submit form
+    async function handleSubmit(e) {
+      e.preventDefault();
+      
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const message = document.getElementById('message').value.trim();
+
+      if (!name || !email || !subject || !message) {
+        showError('Please fill in all fields');
+        return;
+      }
+
+      showLoading();
+
+      try {
+        const response = await fetch(`${apiUrl}/api/public/${tenantSlug}/ticket`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            title: subject,
+            description: message,
+            channel: 'widget',
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to send message');
+        }
+
+        showSuccess();
+      } catch (error) {
+        console.error('Widget error:', error);
+        showError(error.message || 'Failed to send message. Please try again.');
+      }
+    }
+
+    // Event listeners
+    form.addEventListener('submit', handleSubmit);
+    closeBtn.addEventListener('click', closeWidget);
+    closeFormBtn.addEventListener('click', closeWidget);
+    retryBtn.addEventListener('click', resetForm);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeWidget();
+      }
+    });
+
+    // Initialize
+    showForm();
+  </script>
+</body>
+</html>
