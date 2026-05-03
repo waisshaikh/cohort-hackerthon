@@ -1,312 +1,263 @@
-import { useState } from "react";
-import { Copy, Check, Zap, Code, MessageCircle } from "lucide-react";
+import { useState, useMemo } from "react";
+import {
+  Copy, Check, Zap, Code, MessageCircle, Globe, ShieldCheck,
+} from "lucide-react";
+import api, { getErrorMessage } from "../lib/api";
 import { useAuth } from "../features/auth/AuthContext";
+
+// --- Constants & Helpers ---
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+const getCodeTemplates = (url) => ({
+  fetch: `fetch('${url}', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'John Doe',
+    email: 'john@example.com',
+    title: 'Need Help',
+    description: 'Customer support request',
+    channel: 'web'
+  })
+})`,
+  axios: `import axios from 'axios';
+
+axios.post('${url}', {
+  name: 'John Doe',
+  email: 'john@example.com',
+  title: 'Need Help',
+  description: 'Customer support request',
+  channel: 'web'
+})`,
+});
 
 const Integrations = () => {
   const { user } = useAuth();
-  const [copied, setCopied] = useState("");
   const [activeTab, setActiveTab] = useState("widget");
+  const [copied, setCopied] = useState("");
+  
+  // DNS / Verification State
+  const [domain, setDomain] = useState("");
+  const [dnsData, setDnsData] = useState(null);
+  const [status, setStatus] = useState({ loading: false, verifying: false });
+  const [verified, setVerified] = useState(user?.tenant?.websiteIntegration?.isVerified || false);
 
-  // Generate the tenant slug from the tenant data
+  // Memoized derived values
   const tenantSlug = user?.tenant?.slug || "your-tenant-slug";
-  const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-  const widgetScriptUrl = `${apiBaseUrl.replace("/api", "")}/widget.js?tenant=${tenantSlug}`;
-  const integrationUrl = `${apiBaseUrl}/public/${tenantSlug}/ticket`;
+  const integrationUrls = useMemo(() => {
+    const root = API_BASE_URL.replace("/api", "");
+    return {
+      widget: `${root}/widget.js?tenant=${tenantSlug}`,
+      api: `${API_BASE_URL}/public/${tenantSlug}/ticket`
+    };
+  }, [tenantSlug]);
 
-  const copyToClipboard = (text, type = "widget") => {
+  const widgetEmbed = `<script src="${integrationUrls.widget}"></script>`;
+  const templates = getCodeTemplates(integrationUrls.api);
+
+  // Handlers
+  const copyToClipboard = (text, type) => {
     navigator.clipboard.writeText(text);
     setCopied(type);
     setTimeout(() => setCopied(""), 2000);
   };
 
-  const widgetEmbed = `<script src="${widgetScriptUrl}"><\/script>`;
+  const handleSetupDns = async () => {
+    if (!domain.trim()) return;
+    setStatus(prev => ({ ...prev, loading: true }));
+    try {
+      const { data } = await api.post("/integrations/dns/setup", { domain });
+      setDnsData({
+        host: data?.verification?.host || `_tenantdesk-verify.${domain}`,
+        value: data?.verification?.value || data?.verification?.verificationToken,
+      });
+    } catch (err) {
+      alert(getErrorMessage(err));
+    } finally {
+      setStatus(prev => ({ ...prev, loading: false }));
+    }
+  };
 
-  const fetchExample = `fetch('${integrationUrl}', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    name: 'John Doe',
-    email: 'john@example.com',
-    title: 'Account issue',
-    description: 'I am unable to access my account',
-    channel: 'web'
-  })
-})
-.then(res => res.json())
-.then(data => console.log('Ticket created:', data))
-.catch(err => console.error('Error:', err));`;
-
-  const axiosExample = `import axios from 'axios';
-
-axios.post('${integrationUrl}', {
-  name: 'John Doe',
-  email: 'john@example.com',
-  title: 'Account issue',
-  description: 'I am unable to access my account',
-  channel: 'web'
-})
-.then(res => console.log('Ticket created:', res.data))
-.catch(err => console.error('Error:', err));`;
+  const handleVerifyDns = async () => {
+    setStatus(prev => ({ ...prev, verifying: true }));
+    try {
+      await api.post("/integrations/dns/verify");
+      setVerified(true);
+    } catch (err) {
+      alert(getErrorMessage(err));
+    } finally {
+      setStatus(prev => ({ ...prev, verifying: false }));
+    }
+  };
 
   return (
-    <div className="flex-1 bg-linear-to-br from-[#0f172a] via-[#1a1f3a] to-[#0f172a] min-h-screen p-6">
+    <div className="flex-1 min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1a1f3a] to-[#0f172a] p-6">
       <div className="max-w-6xl mx-auto space-y-8">
+        
         {/* Header */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
+        <header>
+          <div className="flex items-center gap-3 mb-2">
             <Zap className="w-6 h-6 text-indigo-400" />
             <h1 className="text-4xl font-bold text-white">Integrations</h1>
           </div>
-          <p className="text-gray-400 text-lg">
-            Connect your website to TenantDesk AI and automatically create support tickets
-          </p>
-        </div>
+          <p className="text-gray-400">Connect your website securely and enable support widget integration</p>
+        </header>
 
-        {/* Tab Navigation */}
+        {/* Tabs Nav */}
         <div className="flex gap-2 border-b border-gray-800">
-          <button
-            onClick={() => setActiveTab("widget")}
-            className={`px-4 py-3 text-sm font-semibold border-b-2 transition ${
-              activeTab === "widget"
-                ? "border-indigo-500 text-white"
-                : "border-transparent text-gray-400 hover:text-gray-300"
-            }`}
-          >
-            <MessageCircle size={16} className="inline mr-2" />
-            Widget (Recommended)
-          </button>
-          <button
-            onClick={() => setActiveTab("api")}
-            className={`px-4 py-3 text-sm font-semibold border-b-2 transition ${
-              activeTab === "api"
-                ? "border-indigo-500 text-white"
-                : "border-transparent text-gray-400 hover:text-gray-300"
-            }`}
-          >
-            <Code size={16} className="inline mr-2" />
-            API Integration
-          </button>
+          <TabButton 
+            active={activeTab === "widget"} 
+            onClick={() => setActiveTab("widget")} 
+            icon={<MessageCircle size={16} />} 
+            label="Widget" 
+          />
+          <TabButton 
+            active={activeTab === "api"} 
+            onClick={() => setActiveTab("api")} 
+            icon={<Code size={16} />} 
+            label="API Integration" 
+          />
         </div>
 
-        {/* Widget Tab */}
+        {/* Widget Tab Content */}
         {activeTab === "widget" && (
           <div className="space-y-6">
-            {/* Widget Card */}
-            <div className="bg-linear-to-br from-indigo-900/20 via-purple-900/20 to-transparent border border-indigo-500/30 rounded-2xl p-8 space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                  <MessageCircle size={24} />
-                  Support Widget
-                </h2>
-                <p className="text-gray-300">
-                  The easiest way to add support to your website. No coding required!
-                </p>
-              </div>
+            {!verified ? (
+              <div className="bg-indigo-900/10 border border-indigo-500/30 rounded-2xl p-8 space-y-8">
+                <SectionHeader 
+                  icon={<Globe className="w-5 h-5 text-indigo-400" />}
+                  title="Domain Verification Required"
+                  description="Verify your domain before enabling widget embedding for secure domain-based protection."
+                />
 
-              {/* Embed Script */}
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-200">Embed Script</label>
-                <p className="text-xs text-gray-400">Copy and paste this into your website before the closing &lt;/body&gt; tag</p>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-[#0f172a] border border-gray-700 rounded-lg px-4 py-3 font-mono text-xs text-gray-200 break-all max-h-20 overflow-y-auto">
-                    {widgetEmbed}
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(widgetEmbed, "widget")}
-                    className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition flex items-center gap-2 whitespace-nowrap shrink-0"
-                  >
-                    {copied === "widget" ? <Check size={18} /> : <Copy size={18} />}
-                    {copied === "widget" ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Widget Preview */}
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-200">Preview</label>
-                <div className="bg-white rounded-lg p-6 min-h-64 flex items-center justify-center relative overflow-hidden">
-                  {/* Widget preview */}
-                  <div className="absolute bottom-6 right-6 w-16 h-16 rounded-full bg-linear-to-br from-purple-500 to-indigo-500 shadow-lg flex items-center justify-center cursor-pointer hover:scale-110 transition transform">
-                    <svg viewBox="0 0 24 24" className="w-8 h-8 fill-white" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8l-2 2V4h14v12z"/>
-                    </svg>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-gray-500 text-sm">
-                      👆 Click the widget button to see it in action
-                    </p>
+                <div className="space-y-3">
+                  <label className="text-sm text-gray-300">Step 1: Enter Your Website Domain</label>
+                  <div className="flex gap-3">
+                    <input
+                      value={domain}
+                      onChange={(e) => setDomain(e.target.value)}
+                      placeholder="example.com"
+                      className="flex-1 rounded-xl border border-gray-700 bg-slate-900 px-4 py-3 text-white outline-none focus:border-indigo-500"
+                    />
+                    <button
+                      onClick={handleSetupDns}
+                      disabled={status.loading}
+                      className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition disabled:opacity-50"
+                    >
+                      {status.loading ? "Generating..." : "Generate DNS"}
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Features */}
-              <div className="grid md:grid-cols-3 gap-4 pt-4 border-t border-gray-800">
-                <div className="space-y-2">
-                  <div className="font-semibold text-indigo-300">💬 No-Code</div>
-                  <p className="text-sm text-gray-400">
-                    Just copy and paste - no development required
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="font-semibold text-indigo-300">🎨 Beautiful</div>
-                  <p className="text-sm text-gray-400">
-                    Modern gradient design that looks great on any site
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <div className="font-semibold text-indigo-300">⚡ Instant</div>
-                  <p className="text-sm text-gray-400">
-                    Tickets appear immediately in your dashboard
-                  </p>
-                </div>
+                {dnsData && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-6">
+                    <div className="space-y-5 rounded-xl bg-slate-900/60 border border-gray-700 p-6">
+                      <h3 className="text-lg font-semibold text-white">Step 2: Add TXT Records</h3>
+                      <div className="space-y-4">
+                        <DnsField label="Host / Name" value={dnsData.host} copied={copied} onCopy={copyToClipboard} id="host" />
+                        <DnsField label="TXT Value" value={dnsData.value} copied={copied} onCopy={copyToClipboard} id="value" />
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200">
+                      Step 3: Add the record to your DNS provider, wait 10–15 mins, then verify.
+                    </div>
+                    <button
+                      onClick={handleVerifyDns}
+                      disabled={status.verifying}
+                      className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 py-4 font-semibold text-white transition"
+                    >
+                      {status.verifying ? "Verifying..." : "Verify Domain"}
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
-
-            {/* Installation Steps */}
-            <div className="bg-[#0f172a] border border-gray-700 rounded-xl p-6 space-y-4">
-              <h3 className="text-lg font-semibold text-white">Installation Steps</h3>
-              <ol className="space-y-3">
-                <li className="flex gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-sm font-bold flex-shrink-0">1</span>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-5 flex items-center gap-3 text-emerald-200">
+                  <ShieldCheck />
                   <div>
-                    <p className="font-medium text-white">Copy the embed script above</p>
-                    <p className="text-sm text-gray-400">Use the copy button to get the exact code</p>
+                    <h3 className="font-semibold">Domain Verified Successfully</h3>
+                    <p className="text-sm opacity-80">Your widget is now secured to your verified domain.</p>
                   </div>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-sm font-bold flex-shrink-0">2</span>
-                  <div>
-                    <p className="font-medium text-white">Open your website's HTML editor</p>
-                    <p className="text-sm text-gray-400">This could be WordPress, Wix, Webflow, HTML file, etc.</p>
-                  </div>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-sm font-bold flex-shrink-0">3</span>
-                  <div>
-                    <p className="font-medium text-white">Paste before closing &lt;/body&gt; tag</p>
-                    <p className="text-sm text-gray-400">Usually at the very end of your page HTML</p>
-                  </div>
-                </li>
-                <li className="flex gap-3">
-                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-600 text-white text-sm font-bold flex-shrink-0">4</span>
-                  <div>
-                    <p className="font-medium text-white">Save and done!</p>
-                    <p className="text-sm text-gray-400">The widget will appear in 2-3 seconds</p>
-                  </div>
-                </li>
-              </ol>
-            </div>
+                </div>
 
-            {/* Success Indicator */}
-            <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-4 flex items-start gap-3">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-              <div className="space-y-1">
-                <p className="font-semibold text-emerald-200">Widget Ready</p>
-                <p className="text-sm text-gray-300">
-                  Your widget is ready to use. Any customer using your website can now send you messages directly.
-                </p>
+                <div className="bg-indigo-900/10 border border-indigo-500/30 rounded-2xl p-8 space-y-6">
+                  <SectionHeader 
+                    title="Widget Script Tag" 
+                    description="Paste this script before your closing body tag." 
+                  />
+                  <CopyBlock text={widgetEmbed} onCopy={() => copyToClipboard(widgetEmbed, "script")} isCopied={copied === "script"} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* API Tab */}
+        {/* API Tab Content */}
         {activeTab === "api" && (
-          <div className="space-y-6">
-            {/* API Integration Card */}
-            <div className="bg-linear-to-br from-indigo-900/20 via-purple-900/20 to-transparent border border-indigo-500/30 rounded-2xl p-8 space-y-6">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-white">Website Contact Form Integration</h2>
-                <p className="text-gray-300">
-                  For developers who want to build custom integrations
-                </p>
-              </div>
-
-              {/* Endpoint Section */}
-              <div className="space-y-3">
-                <label className="block text-sm font-semibold text-gray-200">API Endpoint</label>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-[#0f172a] border border-gray-700 rounded-lg px-4 py-3 font-mono text-sm text-gray-200 break-all">
-                    POST {integrationUrl}
-                  </div>
-                  <button
-                    onClick={() => copyToClipboard(integrationUrl, "endpoint")}
-                    className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition flex items-center gap-2 whitespace-nowrap shrink-0"
-                  >
-                    {copied === "endpoint" ? <Check size={18} /> : <Copy size={18} />}
-                    {copied === "endpoint" ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-                <p className="text-xs text-gray-400">✓ Public endpoint - No authentication required</p>
-              </div>
-
-              {/* Required Fields */}
-              <div className="space-y-3 bg-slate-900/50 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-gray-200">Required Fields</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex gap-3">
-                    <span className="text-indigo-400 font-mono">name</span>
-                    <span className="text-gray-400">Contact person's name (string)</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <span className="text-indigo-400 font-mono">email</span>
-                    <span className="text-gray-400">Contact person's email (string)</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <span className="text-indigo-400 font-mono">title</span>
-                    <span className="text-gray-400">Ticket title (string)</span>
-                  </div>
-                  <div className="flex gap-3">
-                    <span className="text-indigo-400 font-mono">description</span>
-                    <span className="text-gray-400">Ticket description (string, max 5000 chars)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Code Samples */}
-            <div className="grid md:grid-cols-2 gap-6">
-              {/* Fetch API */}
-              <div className="bg-[#0f172a] border border-gray-700 rounded-xl p-6 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Fetch API</h3>
-                  <button
-                    onClick={() => copyToClipboard(fetchExample, "fetch")}
-                    className="p-2 hover:bg-gray-700 rounded transition text-gray-400"
-                    title="Copy code"
-                  >
-                    {copied === "fetch" ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
-                  </button>
-                </div>
-                <pre className="bg-slate-900 rounded-lg p-4 overflow-x-auto text-xs text-gray-300">
-                  <code>{fetchExample}</code>
-                </pre>
-              </div>
-
-              {/* Axios */}
-              <div className="bg-[#0f172a] border border-gray-700 rounded-xl p-6 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-white">Axios</h3>
-                  <button
-                    onClick={() => copyToClipboard(axiosExample, "axios")}
-                    className="p-2 hover:bg-gray-700 rounded transition text-gray-400"
-                    title="Copy code"
-                  >
-                    {copied === "axios" ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
-                  </button>
-                </div>
-                <pre className="bg-slate-900 rounded-lg p-4 overflow-x-auto text-xs text-gray-300">
-                  <code>{axiosExample}</code>
-                </pre>
-              </div>
-            </div>
+          <div className="grid md:grid-cols-2 gap-6">
+            <CodeCard title="Fetch API" code={templates.fetch} isCopied={copied === "fetch"} onCopy={() => copyToClipboard(templates.fetch, "fetch")} />
+            <CodeCard title="Axios" code={templates.axios} isCopied={copied === "axios"} onCopy={() => copyToClipboard(templates.axios, "axios")} />
           </div>
         )}
       </div>
     </div>
   );
 };
+
+// --- Sub-components ---
+
+const TabButton = ({ active, onClick, icon, label }) => (
+  <button
+    onClick={onClick}
+    className={`px-4 py-3 text-sm font-semibold border-b-2 transition flex items-center gap-2 ${
+      active ? "border-indigo-500 text-white" : "border-transparent text-gray-400 hover:text-gray-200"
+    }`}
+  >
+    {icon} {label}
+  </button>
+);
+
+const SectionHeader = ({ icon, title, description }) => (
+  <div className="space-y-2">
+    <div className="flex items-center gap-2">
+      {icon}
+      <h2 className="text-2xl font-bold text-white">{title}</h2>
+    </div>
+    {description && <p className="text-gray-400">{description}</p>}
+  </div>
+);
+
+const DnsField = ({ label, value, copied, onCopy, id }) => (
+  <div>
+    <label className="block text-sm text-gray-400 mb-2">{label}</label>
+    <CopyBlock text={value} onCopy={() => onCopy(value, id)} isCopied={copied === id} />
+  </div>
+);
+
+const CopyBlock = ({ text, onCopy, isCopied }) => (
+  <div className="flex gap-2">
+    <div className="flex-1 bg-slate-950 border border-gray-700 rounded-lg px-4 py-3 text-sm text-white font-mono break-all">
+      {text}
+    </div>
+    <button onClick={onCopy} className="px-4 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-white transition">
+      {isCopied ? <Check size={18} /> : <Copy size={18} />}
+    </button>
+  </div>
+);
+
+const CodeCard = ({ title, code, isCopied, onCopy }) => (
+  <div className="bg-slate-900 border border-gray-700 rounded-xl p-6 space-y-3">
+    <div className="flex items-center justify-between">
+      <h3 className="text-lg font-semibold text-white">{title}</h3>
+      <button onClick={onCopy} className="p-2 hover:bg-gray-800 rounded transition">
+        {isCopied ? <Check size={18} className="text-green-400" /> : <Copy size={18} className="text-gray-400" />}
+      </button>
+    </div>
+    <pre className="bg-slate-950 rounded-lg p-4 overflow-x-auto text-xs text-gray-300 font-mono">
+      <code>{code}</code>
+    </pre>
+  </div>
+);
 
 export default Integrations;
