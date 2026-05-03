@@ -20,7 +20,7 @@
   const config = {
     tenantSlug,
     apiUrl: url.origin,
-    iframeUrl: `${url.origin}/widget-iframe.html?tenant=${tenantSlug}`,
+   iframeUrl: `${url.origin}/api/public/widget-iframe.html?tenant=${tenantSlug}`,
   };
 
   // Create widget styles
