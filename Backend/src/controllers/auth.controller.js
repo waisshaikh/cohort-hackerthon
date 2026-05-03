@@ -295,6 +295,28 @@ export const inviteAgent = async (req, res) => {
     });
   }
 };
+
+export const listAgents = async (req, res) => {
+  try {
+    const agents = await userModel.find({
+      tenant: req.user.tenant,
+      role: "AGENT",
+    })
+    .select("-password")
+    .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      agents,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch agents",
+    });
+  }
+};
+
 export default {
   register,
   login,

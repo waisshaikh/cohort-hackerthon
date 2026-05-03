@@ -14,5 +14,12 @@ router.get("/verify-email", verifyEmail);
 
 router.post("/invite-agent",authUser,requireRoles("TENANT_ADMIN"),inviteAgentValidator,inviteAgent);
 
+router.get(
+  "/agents",
+  authUser,
+  requireRoles("TENANT_ADMIN"),
+  listAgents
+);
+
 
 export default router;
