@@ -4,6 +4,7 @@ import {
   ChartNoAxesCombined,
   EllipsisVertical,
   LayoutDashboard,
+  Plug,
   Settings,
   Ticket,
   Users2,
@@ -24,6 +25,7 @@ const tenantLinks = [
   { to: "/KnowledgeBase", label: "Knowledge Base", icon: MdLibraryBooks },
   { to: "/customer", label: "Customers", icon: PiUsersThreeBold },
   { to: "/team", label: "Team", icon: Users2 },
+  { to: "/integrations", label: "Integrations", icon: Plug },
   { to: "/setting", label: "Settings", icon: Settings },
 ];
 
@@ -37,42 +39,78 @@ const Sidebar = () => {
   const links = user?.role === "SUPER_ADMIN" ? adminLinks : tenantLinks;
 
   return (
-    <div className="w-64 bg-[#344c83] p-4 flex flex-col justify-between border-r border-gray-800">
-      <div>
-        <h1 className="text-xl font-bold text-white mb-6">TenantDesk</h1>
+    <div className="w-72 bg-[#020617] p-5 flex flex-col justify-between border-r border-slate-800/50 shadow-[4px_0_24px_rgba(0,0,0,0.3)]">
+      <div className="flex flex-col">
+        {/* Logo Section */}
+        <div className="flex items-center gap-3 mb-10 px-2">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-600/20">
+             <Bot className="text-white" size={20} />
+          </div>
+          <h1 className="text-xl font-black text-white tracking-tight uppercase">
+            Tenant<span className="text-indigo-500">Desk</span>
+          </h1>
+        </div>
 
-        <nav className="space-y-2 text-sm">
+        {/* Navigation Section */}
+        <nav className="space-y-1.5 overflow-y-auto max-h-[70vh] no-scrollbar">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-4 px-2">
+            Main Menu
+          </p>
           {links.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               end={to === "/"}
               className={({ isActive }) =>
-                `p-2 flex gap-2 rounded cursor-pointer font-medium items-center transition ${
+                `group relative px-3 py-2.5 flex gap-3 rounded-xl cursor-pointer font-bold items-center transition-all duration-300 overflow-hidden ${
                   isActive
-                    ? "bg-indigo-600 text-white"
-                    : "hover:bg-[#1E293B] text-gray-300"
+                    ? "bg-indigo-600/10 text-white"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/40"
                 }`
               }
               to={to}
             >
-              <Icon size={20} /> {label}
+              {/* Active Indicator Line */}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <div className="absolute left-0 w-1 h-5 bg-indigo-500 rounded-r-full animate-in slide-in-from-left-full duration-300" />
+                  )}
+                  <Icon 
+                    size={18} 
+                    className={`${isActive ? "text-indigo-400" : "text-slate-500 group-hover:text-slate-300 transition-colors"}`} 
+                  /> 
+                  <span className="text-[13px] tracking-wide">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
       </div>
 
-      <div className="text-xs text-gray-400 flex justify-between p-2 rounded-lg bg-[#1E293B]">
-        <div className="flex gap-3 min-w-0">
-          <img src={GaneshPic} alt="" className="w-10 h-10 rounded-full shrink-0" />
-          <div className="min-w-0">
-            <h4 className="font-medium text-sm text-white truncate">
-              {user?.username || "User"}
-            </h4>
-            <h5 className="font-medium text-sm capitalize">{user?.role || "admin"}</h5>
+      {/* User Profile Section */}
+      <div className="mt-auto pt-6 border-t border-slate-800/50">
+        <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-900/50 border border-slate-800/50 backdrop-blur-sm transition-all hover:bg-slate-800/60 group">
+          <div className="flex gap-3 items-center min-w-0">
+            <div className="relative">
+              <img 
+                src={GaneshPic} 
+                alt="Profile" 
+                className="w-10 h-10 rounded-xl object-cover ring-2 ring-slate-800 group-hover:ring-indigo-500/50 transition-all" 
+              />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-[#020617] rounded-full"></div>
+            </div>
+            <div className="min-w-0">
+              <h4 className="font-bold text-sm text-white truncate leading-tight">
+                {user?.username || "Ganesh Rajput"}
+              </h4>
+              <h5 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mt-0.5">
+                {user?.role || "Systems Admin"}
+              </h5>
+            </div>
           </div>
-        </div>
-        <div className="py-1">
-          <EllipsisVertical className="cursor-pointer" />
+          <div className="p-1 hover:bg-slate-700 rounded-lg transition-colors text-slate-500">
+            <EllipsisVertical size={18} className="cursor-pointer" />
+          </div>
         </div>
       </div>
     </div>

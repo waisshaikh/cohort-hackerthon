@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FiRefreshCw } from "react-icons/fi";
 import { IoSparklesOutline } from "react-icons/io5";
 
@@ -13,6 +13,16 @@ export default function AIAssistant() {
       text: "Hi. Send me a support message and I will classify it.",
     },
   ]);
+
+  // Auto-scroll ke liye ref
+  const scrollRef = useRef(null);
+
+  // Naye message aane par niche scroll karne ke liye effect
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, loading]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
@@ -77,17 +87,21 @@ export default function AIAssistant() {
 
           <button
             onClick={reset}
-            className="border border-gray-700 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2"
+            className="border border-gray-700 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800 transition-colors"
           >
             <FiRefreshCw /> Reset
           </button>
         </div>
 
-        <div className="flex-1 bg-[#0f172a] border border-gray-800 rounded-2xl p-4 overflow-y-auto space-y-4">
+        {/* Scroll Container Fix */}
+        <div 
+          ref={scrollRef}
+          className="flex-1 bg-[#0f172a] border border-gray-800 rounded-2xl p-4 overflow-y-auto overflow-x-auto custom-scrollbar space-y-4"
+        >
           {messages.map((msg, index) => (
             <div
               key={`${msg.role}-${index}`}
-              className={`max-w-[75%] p-3 rounded-xl text-sm whitespace-pre-wrap ${
+              className={`max-w-[85%] sm:max-w-[75%] p-3 rounded-xl text-sm whitespace-pre-wrap break-words ${
                 msg.role === "user"
                   ? "ml-auto bg-gradient-to-r from-purple-500 to-indigo-500"
                   : "bg-[#020617] border border-gray-700"
@@ -97,7 +111,7 @@ export default function AIAssistant() {
             </div>
           ))}
           {loading && (
-            <div className="max-w-[75%] p-3 rounded-xl text-sm bg-[#020617] border border-gray-700">
+            <div className="max-w-[75%] p-3 rounded-xl text-sm bg-[#020617] border border-gray-700 animate-pulse">
               Analyzing...
             </div>
           )}
@@ -112,13 +126,13 @@ export default function AIAssistant() {
             onKeyDown={(event) => {
               if (event.key === "Enter") sendMessage();
             }}
-            className="flex-1 bg-[#020617] border border-gray-700 rounded-lg px-3 py-2 outline-none"
+            className="flex-1 bg-[#020617] border border-gray-700 rounded-lg px-4 py-2 outline-none focus:border-purple-500 transition-all"
           />
 
           <button
             onClick={sendMessage}
             disabled={loading}
-            className="bg-gradient-to-r from-purple-500 to-indigo-500 px-5 rounded-lg disabled:opacity-60"
+            className="bg-gradient-to-r from-purple-500 to-indigo-500 px-6 rounded-lg disabled:opacity-60 font-medium active:scale-95 transition-transform"
           >
             {loading ? "..." : "Send"}
           </button>
