@@ -179,13 +179,11 @@ export const setupCmsIntegration = asyncHandler(async (req, res) => {
 });
 
 export const getIntegrationStatus = asyncHandler(async (req, res) => {
-  const tenant = await Tenant.findById(req.user.tenant).select(
-    "slug websiteIntegration"
-  );
+  const tenant = await Tenant.findById(req.user.tenant);
 
   res.status(200).json({
     success: true,
-    integration: tenant.websiteIntegration,
     tenantSlug: tenant.slug,
+    websiteIntegration: tenant.websiteIntegration,
   });
 });
