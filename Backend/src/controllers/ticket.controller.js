@@ -567,39 +567,49 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
     });
   }
 
-  const tenant = await Tenant.findOne({ slug: tenantSlug, status: "active" });
+  const tenant = await Tenant.findOne({
+    slug: tenantSlug,
+    status: "active",
+  });
 
- if (
-  tenant.websiteIntegration?.isVerified &&
-  tenant.websiteIntegration?.domain
-) {
-  const requestOrigin =
-    req.headers.origin || req.headers.referer || "";
-
-  const incomingHost = normalizeHostname(requestOrigin);
-  const verifiedHost = normalizeHostname(
-    tenant.websiteIntegration.domain
-  );
-
-  if (!incomingHost || !verifiedHost) {
-    return res.status(403).json({
+  if (!tenant) {
+    return res.status(404).json({
       success: false,
-      message: "Unable to validate request domain",
+      message: "Tenant not found",
     });
   }
 
-  const allowedHosts = [
-    verifiedHost,
-    `www.${verifiedHost}`,
-  ].map((host) => host.replace(/^www\./, ""));
+  // Domain restriction for verified widget integrations
+  if (
+    tenant.websiteIntegration?.isVerified &&
+    tenant.websiteIntegration?.domain
+  ) {
+    const requestOrigin = req.headers.origin || req.headers.referer || "";
 
-  if (!allowedHosts.includes(incomingHost)) {
-    return res.status(403).json({
-      success: false,
-      message: "Unauthorized domain for this widget",
-    });
+    const incomingHost = normalizeHostname(requestOrigin);
+    const verifiedHost = normalizeHostname(
+      tenant.websiteIntegration.domain
+    );
+
+    if (!incomingHost || !verifiedHost) {
+      return res.status(403).json({
+        success: false,
+        message: "Unable to validate request domain",
+      });
+    }
+
+    const allowedHosts = [
+      verifiedHost,
+      `www.${verifiedHost}`,
+    ];
+
+    if (!allowedHosts.includes(incomingHost)) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized domain for this widget",
+      });
+    }
   }
-}
 
   let customer = await userModel.findOne({
     email,
@@ -620,7 +630,6 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
 
   const ai = await analyzeTicketMessage(description, tenant._id);
 
-  // Determine source based on channel
   const sourceMap = {
     widget: "WIDGET",
     web: "WEBSITE",
@@ -628,6 +637,7 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
     whatsapp: "WHATSAPP",
     phone: "PHONE",
   };
+
   const source = sourceMap[channel] || "WEBSITE";
 
   const ticket = await Ticket.create({
@@ -651,7 +661,7 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
     visibility: "public",
   });
 
-  res.status(201).json({
+  return res.status(201).json({
     success: true,
     message: "Ticket submitted successfully",
     ticket,
