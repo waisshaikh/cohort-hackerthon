@@ -2,6 +2,8 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
+import Tenant from "./models/tenant.model.js";
+
 import analyticsRoutes from "./routes/analytics.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
@@ -13,28 +15,55 @@ import integrationRoutes from "./routes/integration.routes.js";
 
 const app = express();
 
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:5174",
-  "http://127.0.0.1:5174",
-  "https://zyberly.in",
-  "https://www.zyberly.in",
-].filter(Boolean);
-
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+    origin: async (origin, callback) => {
+      try {
+        // Allow Postman / server-to-server / same-origin requests
+        if (!origin) return callback(null, true);
 
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+        // Local dev
+        const localOrigins = [
+          "http://localhost:5173",
+          "http://127.0.0.1:5173",
+          "http://localhost:5174",
+          "http://127.0.0.1:5174",
+        ];
+
+        if (localOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        // Allow backend/widget host
+        if (origin === "https://cohort-hackerthon.onrender.com") {
+          return callback(null, true);
+        }
+
+        const cleanDomain = origin
+          .replace(/^https?:\/\//, "")
+          .replace(/^www\./, "");
+
+        const tenant = await Tenant.findOne({
+          "websiteIntegration.domain": cleanDomain,
+          "websiteIntegration.isVerified": true,
+        });
+
+        if (tenant) {
+          return callback(null, true);
+        }
+
+        return callback(new Error(`CORS blocked for origin: ${origin}`));
+      } catch (err) {
+        return callback(err);
+      }
     },
+
     credentials: true,
-  }),
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
 );
+
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
