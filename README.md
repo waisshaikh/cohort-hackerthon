@@ -235,10 +235,10 @@ npm run dev
 * **Wais Shaikh** – Full Stack Developer
   GitHub: https://github.com/waisshaikh
 
-* **Ganesh** – Developer
+* **Ganesh** – Frontend Developer
   GitHub: https://github.com/CodeWithGanesh1
 
-* **Roshan Nawkar** – Developer
+* **Roshan Nawkar** –Backend Developer
   GitHub: https://github.com/roshannawkar07
 
 
