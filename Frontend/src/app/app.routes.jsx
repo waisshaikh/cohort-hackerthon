@@ -11,11 +11,11 @@ import Charts from "../Project/ChartsPage";
 import Customers from "../Project/CustomersPage";
 import Dashboard from "../Project/Dashboard";
 import Integrations from "../Project/Integrations";
+import KnowledgeBase from "../Project/KnowledgeBase";
 import Setting from "../Project/Setting";
 import Team from "../Project/Team";
 import Tenants from "../Project/Tenants";
 import Ticket from "../Project/Ticket";
-import Home from "../Project/Home";
 
 export const router = createBrowserRouter([
   {
@@ -27,8 +27,7 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            // element: <Dashboard />,
-            element: <Home />,
+            element: <Dashboard />,
           },
           {
             path: "tickets",
@@ -75,6 +74,14 @@ export const router = createBrowserRouter([
             element: (
               <TenantRoute>
                 <Analytics />
+              </TenantRoute>
+            ),
+          },
+          {
+            path: "KnowledgeBase",
+            element: (
+              <TenantRoute>
+                <KnowledgeBase />
               </TenantRoute>
             ),
           },
