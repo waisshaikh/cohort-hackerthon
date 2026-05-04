@@ -9,6 +9,7 @@ import authRoutes from "./routes/auth.routes.js";
 import aiRoutes from "./routes/ai.routes.js";
 import tenantRoutes from "./routes/tenant.routes.js";
 import ticketRoutes from "./routes/ticket.routes.js";
+import customerRoutes from "./routes/customer.routes.js";
 import publicRoutes from "./routes/public.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import integrationRoutes from "./routes/integration.routes.js";
@@ -78,6 +79,7 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/customers", customerRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/analytics", analyticsRoutes);

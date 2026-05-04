@@ -23,7 +23,12 @@ import {
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const canAccessTicket = (user, ticket) => {
-  if (["admin", "agent", "superadmin"].includes(user.role)) return true;
+  if (
+    ["SUPER_ADMIN", "TENANT_ADMIN", "AGENT"].includes(user.role)
+  ) {
+    return true;
+  }
+
   return String(ticket.customer) === String(user.id);
 };
 
@@ -579,7 +584,6 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
     });
   }
 
-  // DECLARE OUTSIDE BLOCK
   const requestOrigin = req.body.parentDomain || "";
 
   if (
@@ -591,19 +595,12 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
       tenant.websiteIntegration.domain
     );
 
-    if (!incomingHost || !verifiedHost) {
-      return res.status(403).json({
-        success: false,
-        message: "Unable to validate request domain",
-      });
-    }
-
     const allowedHosts = [
       verifiedHost,
       `www.${verifiedHost}`,
     ];
 
-    if (!allowedHosts.includes(incomingHost)) {
+    if (!incomingHost || !allowedHosts.includes(incomingHost)) {
       return res.status(403).json({
         success: false,
         message: "Unauthorized domain for this widget",
@@ -611,5 +608,48 @@ export const createPublicTicket = asyncHandler(async (req, res) => {
     }
   }
 
-  // continue ticket creation...
+  /* FIND OR CREATE CUSTOMER */
+  let customer = await userModel.findOne({ email });
+
+  if (!customer) {
+    customer = await userModel.create({
+      username: `${name.replace(/\s+/g, "").toLowerCase()}_${Date.now()}`,
+      email,
+      role: "CUSTOMER",
+      tenant: tenant._id,
+      verified: false,
+    });
+  }
+
+  /* AI ANALYSIS */
+  const ai = await analyzeTicketMessage(description, tenant._id);
+
+  /* CREATE TICKET */
+  const ticket = await Ticket.create({
+    tenant: tenant._id,
+    customer: customer._id,
+    title,
+    description,
+    channel,
+
+    priority: ai.priority,
+    category: ai.category,
+    department: ai.recommendedDepartment,
+    ai,
+  });
+
+  /* CREATE INITIAL MESSAGE */
+  await Message.create({
+    tenant: tenant._id,
+    ticket: ticket._id,
+    author: customer._id,
+    body: description,
+    visibility: "public",
+  });
+
+  return res.status(201).json({
+    success: true,
+    message: "Ticket created successfully",
+    ticket,
+  });
 });
