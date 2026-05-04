@@ -35,8 +35,8 @@ export default function Setting() {
       const { data } = await api.get("/auth/get-me");
       setUser(data.user);
       setDisplayName(data.user.username);
-      setDomain(data.user.domain || "");
-      setTenantName(data.user.tenantName || "");
+      setDomain(data.user?.tenant?.domain || "");
+      setTenantName(data.user?.tenant?.name || "");
     } catch (err) {
       console.error(err);
     }

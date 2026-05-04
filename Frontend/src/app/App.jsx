@@ -1,7 +1,7 @@
 import { RouterProvider } from "react-router-dom"
 import { router } from "./app.routes"
 import { AuthProvider } from "../features/auth/AuthContext"
-import { ThemeProvider } from "../Project/ThemeContext"
+import { ThemeProvider } from "../Context/ThemeContext"
 
 function App() {
   return (
