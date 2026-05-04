@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis } from "recharts";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  BarChart,
+  Bar,
+  CartesianGrid,
+  YAxis,
+} from "recharts";
 import api, { getErrorMessage } from "../lib/api";
 
 const Analytics = () => {
@@ -27,6 +37,10 @@ const Analytics = () => {
 
   const chartData = overview?.breakdowns?.status
     ? Object.entries(overview.breakdowns.status).map(([status, count]) => ({ status, count }))
+    : [];
+
+  const barChartData = overview?.breakdowns?.categories
+    ? Object.entries(overview.breakdowns.categories).map(([category, count]) => ({ category, count }))
     : [];
 
   return (
@@ -64,7 +78,7 @@ const Analytics = () => {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="rounded-3xl border border-slate-800 bg-[#0f172a] p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Status breakdown</h2>
+              <h2 className="text-lg font-semibold">Status Breakdown</h2>
             </div>
             <div className="h-72">
               {loading ? (
@@ -84,10 +98,26 @@ const Analytics = () => {
           </div>
 
           <div className="rounded-3xl border border-slate-800 bg-[#0f172a] p-6">
-            <h2 className="text-lg font-semibold mb-4">Insights</h2>
-            <p className="text-sm text-slate-300">
-              This analytics page is connected to the tenant dashboard endpoint. Expand it with deeper tenant reports and SLA charts as your backend metrics grow.
-            </p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Category Breakdown</h2>
+            </div>
+            <div className="h-72">
+              {loading ? (
+                <div className="flex h-full items-center justify-center text-slate-500">Loading chart…</div>
+              ) : barChartData.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-slate-500">No category data available.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barChartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="category" stroke="#718096" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#38bdf8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
           </div>
         </div>
       </div>

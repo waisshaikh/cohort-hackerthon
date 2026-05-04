@@ -6,6 +6,7 @@ import {
   FiLogOut,
   FiEdit3,
   FiMail,
+  FiGlobe,
 } from "react-icons/fi";
 import { IoSparkles } from "react-icons/io5";
 import api from "../lib/api";
@@ -13,6 +14,8 @@ import api from "../lib/api";
 export default function Setting() {
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState("");
+  const [domain, setDomain] = useState("");
+  const [tenantName, setTenantName] = useState("");
 
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("theme") === "dark";
@@ -32,6 +35,8 @@ export default function Setting() {
       const { data } = await api.get("/auth/get-me");
       setUser(data.user);
       setDisplayName(data.user.username);
+      setDomain(data.user.domain || "");
+      setTenantName(data.user.tenantName || "");
     } catch (err) {
       console.error(err);
     }
@@ -41,6 +46,8 @@ export default function Setting() {
     try {
       const { data } = await api.put("/auth/update-profile", {
         username: displayName,
+        domain,
+        tenantName,
       });
 
       setUser(data.user);
@@ -61,18 +68,18 @@ export default function Setting() {
   if (!user) return null;
 
   return (
-    <div className={`min-h-screen transition-colors duration-700 flex justify-center p-4 md:p-10 
-      ${darkMode ? "bg-[#020617] text-slate-100" : "bg-[#f8fafc] text-slate-900"}`}>
-
+    <div
+      className={`min-h-screen transition-colors duration-700 flex justify-center p-4 md:p-10 
+      ${darkMode ? "bg-[#020617] text-slate-100" : "bg-[#f8fafc] text-slate-900"}`}
+    >
       {darkMode && (
         <>
-          <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-          <div className="fixed bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+          <div className="fixed top-[-10%] left-[-10%] w-125 h-125 bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+          <div className="fixed bottom-[-10%] right-[-10%] w-125 h-125 bg-purple-600/10 blur-[120px] rounded-full pointer-events-none"></div>
         </>
       )}
 
       <div className="w-full max-w-5xl space-y-10 relative z-10">
-
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-indigo-500 font-bold text-xs uppercase tracking-[0.3em] mb-2">
@@ -84,18 +91,20 @@ export default function Setting() {
           </div>
         </header>
 
-        <div className={`group relative rounded-[3rem] p-[1px] transition-all duration-500 overflow-hidden shadow-2xl
-          ${darkMode ? "bg-gradient-to-br from-slate-700/50 to-slate-900/50" : "bg-gradient-to-br from-slate-200 to-white"}`}>
-
-          <div className={`relative rounded-[3rem] p-8 md:p-12 backdrop-blur-3xl transition-all
-            ${darkMode ? "bg-slate-950/80" : "bg-white/90"}`}>
-
+        <div
+          className={`group relative rounded-4xl p-px transition-all duration-500 overflow-hidden shadow-2xl
+          ${darkMode ? "bg-linear-to-br from-slate-700/50 to-slate-900/50" : "bg-linear-to-br from-slate-200 to-white"}`}
+        >
+          <div
+            className={`relative rounded-4xl p-8 md:p-12 backdrop-blur-3xl transition-all
+            ${darkMode ? "bg-slate-950/80" : "bg-white/90"}`}
+          >
             <div className="flex flex-col md:flex-row items-center gap-10">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600 to-purple-500 rounded-[2.5rem] blur-md opacity-40"></div>
+                <div className="absolute inset-0 bg-linear-to-tr from-indigo-600 to-purple-500 rounded-[2.5rem] blur-md opacity-40"></div>
 
                 <div className="relative w-32 h-32 rounded-[2.5rem] bg-[#020617] border-2 border-white/10 flex items-center justify-center">
-                  <span className="text-5xl font-black bg-gradient-to-br from-white to-slate-500 bg-clip-text text-transparent">
+                  <span className="text-5xl font-black bg-linear-to-br from-white to-slate-500 bg-clip-text text-transparent">
                     {user.username?.charAt(0).toUpperCase()}
                   </span>
                 </div>
@@ -124,13 +133,13 @@ export default function Setting() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
-
-          <section className={`lg:col-span-1 rounded-[2.5rem] p-8 border
-            ${darkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200"}`}>
-
+          <section
+            className={`lg:col-span-1 rounded-[2.5rem] p-8 border
+            ${darkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200"}`}
+          >
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 rounded-2xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                <FiMoon size={24}/>
+                <FiMoon size={24} />
               </div>
               <h3 className="text-xl font-bold">Theme</h3>
             </div>
@@ -138,28 +147,43 @@ export default function Setting() {
             <Toggle label="Dark Interface" enabled={darkMode} setEnabled={setDarkMode} />
           </section>
 
-          <section className={`lg:col-span-2 rounded-[2.5rem] p-8 border
-            ${darkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200"}`}>
-
+          <section
+            className={`lg:col-span-2 rounded-[2.5rem] p-8 border
+            ${darkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200"}`}
+          >
             <div className="flex items-center gap-4 mb-8">
               <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                <FiUser size={24}/>
+                <FiUser size={24} />
               </div>
               <h3 className="text-xl font-bold">Personal Details</h3>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
-
               <input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="w-full rounded-2xl px-6 py-4 bg-slate-950 border border-slate-800"
+                placeholder="Display Name"
               />
 
               <input
                 value={user.email}
                 readOnly
                 className="w-full rounded-2xl px-6 py-4 bg-slate-950 border border-slate-800 opacity-70"
+              />
+
+              <input
+                value={domain}
+                onChange={(e) => setDomain(e.target.value)}
+                className="w-full rounded-2xl px-6 py-4 bg-slate-950 border border-slate-800"
+                placeholder="Domain"
+              />
+
+              <input
+                value={tenantName}
+                onChange={(e) => setTenantName(e.target.value)}
+                className="w-full rounded-2xl px-6 py-4 bg-slate-950 border border-slate-800"
+                placeholder="Tenant Name"
               />
             </div>
 
@@ -171,11 +195,12 @@ export default function Setting() {
             </button>
           </section>
 
-          <section className={`lg:col-span-3 rounded-[2.5rem] p-8 border flex justify-between items-center
-            ${darkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200"}`}>
-
+          <section
+            className={`lg:col-span-3 rounded-[2.5rem] p-8 border flex justify-between items-center
+            ${darkMode ? "bg-slate-900/40 border-slate-800" : "bg-white border-slate-200"}`}
+          >
             <div className="flex items-center gap-4">
-              <FiShield size={24}/>
+              <FiShield size={24} />
               <span>Security & Privacy</span>
             </div>
 
@@ -194,18 +219,18 @@ export default function Setting() {
 
 function Toggle({ label, enabled, setEnabled }) {
   return (
-    <div className="flex justify-between items-center p-5 rounded-[2rem] border border-slate-700">
+    <div className="flex justify-between items-center p-5 rounded-4xl border border-slate-700">
       <span className="font-bold text-sm">{label}</span>
 
       <button
         onClick={() => setEnabled(!enabled)}
-        className={`w-14 h-7 flex items-center rounded-full p-1 ${
-          enabled ? "bg-indigo-500" : "bg-slate-400"
-        }`}
+        className={`w-14 h-8 rounded-full flex items-center p-1 transition-all duration-300
+        ${enabled ? "bg-indigo-500" : "bg-slate-700"}`}
       >
-        <div className={`bg-white w-5 h-5 rounded-full transition-all ${
-          enabled ? "translate-x-7" : ""
-        }`} />
+        <span
+          className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-300
+          ${enabled ? "translate-x-6" : "translate-x-0"}`}
+        ></span>
       </button>
     </div>
   );
