@@ -20,7 +20,6 @@ const tenantLinks = [
   { to: "/AiAssistant", label: "AI Assistant", icon: Bot },
   { to: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
   { to: "/charts", label: "Charts", icon: PiChatsCircleLight },
-  { to: "/KnowledgeBase", label: "Knowledge Base", icon: MdLibraryBooks },
   { to: "/customer", label: "Customers", icon: PiUsersThreeBold },
   { to: "/team", label: "Team", icon: Users2 },
   { to: "/integrations", label: "Integrations", icon: Plug },

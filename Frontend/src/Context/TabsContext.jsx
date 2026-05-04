@@ -8,7 +8,6 @@ const titles = {
   "/": "Dashboard",
   "/tickets": "Tickets",
   "/charts": "Charts",
-  "/KnowledgeBase": "KnowledgeBase",
   "/analytics": "Analytics",
   "/AiAssistant": "AI Assistant",
   "/customer": "Customers",

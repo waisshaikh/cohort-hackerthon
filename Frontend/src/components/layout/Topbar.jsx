@@ -1,6 +1,10 @@
 import { Search } from "lucide-react";
 import { useAuth } from "../../features/auth/AuthContext";
+<<<<<<< HEAD
 // import Tabs from "./Tabs";
+=======
+
+>>>>>>> 691ebbe79ed2dc4992574611ccb486763bade469
 const Topbar = () => {
   const { user, logout } = useAuth();
 
@@ -19,8 +23,15 @@ const Topbar = () => {
   };
 
   return (
+<<<<<<< HEAD
     <div className="bg-[#0F172A] border-b border-gray-800 p-3 flex justify-end gap-4">
       <div className="flex-1 min-w-0 overflow-x-auto">{/* <Tabs /> */}</div>
+=======
+    <div className="bg-[#0F172A] border-b border-gray-800 p-3 flex justify-between gap-4">
+      <h1 className="text-lg font-semibold text-white flex items-center">
+        Dashboard
+      </h1>
+>>>>>>> 691ebbe79ed2dc4992574611ccb486763bade469
 
       <div className="flex gap-4 items-center">
         <div className="relative max-w-64">
