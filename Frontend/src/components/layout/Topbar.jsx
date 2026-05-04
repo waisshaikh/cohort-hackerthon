@@ -1,5 +1,9 @@
 import { useAuth } from "../../features/auth/AuthContext";
+<<<<<<< HEAD
+// import Tabs from "./Tabs";
+=======
 
+>>>>>>> 691ebbe79ed2dc4992574611ccb486763bade469
 const Topbar = () => {
   const { user, logout } = useAuth();
 
@@ -19,10 +23,20 @@ const Topbar = () => {
   };
 
   return (
+<<<<<<< HEAD
     <div className="bg-[#0F172A] border-b border-gray-800 px-6 py-3 flex justify-between items-center">
       <h1 className="text-lg font-semibold text-white">
+=======
+<<<<<<< HEAD
+    <div className="bg-[#0F172A] border-b border-gray-800 p-3 flex justify-end gap-4">
+      <div className="flex-1 min-w-0 overflow-x-auto">{/* <Tabs /> */}</div>
+=======
+    <div className="bg-[#0F172A] border-b border-gray-800 p-3 flex justify-between gap-4">
+      <h1 className="text-lg font-semibold text-white flex items-center">
+>>>>>>> fc00c3d1f4b11300cdaee2324b02ac499d1f401a
         Dashboard
       </h1>
+>>>>>>> 691ebbe79ed2dc4992574611ccb486763bade469
 
       <div className="flex gap-3 items-center">
         <span className="max-w-36 truncate text-sm text-gray-300">
