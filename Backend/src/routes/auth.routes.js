@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { register, verifyEmail, login, getMe,  inviteAgent, listAgents } from "../controllers/auth.controller.js";
+import { register, verifyEmail, login, getMe,  inviteAgent, listAgents, updateProfile } from "../controllers/auth.controller.js";
 import { authUser } from "../middlewares/auth.middleware.js";
 import { registerValidator, loginValidator, inviteAgentValidator } from "../validators/auth.validator.js";
 import { requireRoles } from "../middlewares/role.middleware.js";
@@ -19,6 +19,12 @@ router.get(
   authUser,
   requireRoles("TENANT_ADMIN"),
   listAgents
+);
+
+router.put(
+  "/update-profile",
+  authUser,
+  updateProfile
 );
 
 

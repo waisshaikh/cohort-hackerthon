@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FiUserPlus,
   FiShield,
@@ -23,8 +23,29 @@ export default function Team() {
     role: "Agent",
   });
 
+  const [agents, setAgents] = useState([]);
+  const [loadingAgents, setLoadingAgents] = useState(true);
+
   const [isSuccess, setIsSuccess] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const loadAgents = async () => {
+    try {
+      setLoadingAgents(true);
+
+      const { data } = await api.get("/auth/agents");
+
+      setAgents(data.agents || []);
+    } catch (err) {
+      console.error("Failed to load agents:", err);
+    } finally {
+      setLoadingAgents(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAgents();
+  }, []);
 
   const handleInvite = async (e) => {
     e.preventDefault();
@@ -37,6 +58,8 @@ export default function Team() {
         email: formData.email,
         password: formData.password,
       });
+
+      await loadAgents();
 
       setIsSuccess(true);
 
@@ -62,6 +85,27 @@ export default function Team() {
       setSubmitting(false);
     }
   };
+
+  const stats = [
+    {
+      label: "Active Agents",
+      value: agents.length,
+      icon: <IoPeopleOutline />,
+      color: "text-blue-400",
+    },
+    {
+      label: "Avg Response",
+      value: "1.2m",
+      icon: <FiActivity />,
+      color: "text-emerald-400",
+    },
+    {
+      label: "Open Slots",
+      value: "Unlimited",
+      icon: <IoRocketOutline />,
+      color: "text-purple-400",
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-[#020617] text-slate-200 p-8 font-sans selection:bg-indigo-500/30">
@@ -94,26 +138,7 @@ export default function Team() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            {
-              label: "Active Agents",
-              value: "04",
-              icon: <IoPeopleOutline />,
-              color: "text-blue-400",
-            },
-            {
-              label: "Avg Response",
-              value: "1.2m",
-              icon: <FiActivity />,
-              color: "text-emerald-400",
-            },
-            {
-              label: "Open Slots",
-              value: "Unlimited",
-              icon: <IoRocketOutline />,
-              color: "text-purple-400",
-            },
-          ].map((stat, i) => (
+          {stats.map((stat, i) => (
             <div
               key={i}
               className="p-6 rounded-[2rem] border border-slate-800 bg-[#0f172a]/40 backdrop-blur-xl flex items-center justify-between group hover:border-slate-700 transition-all"
@@ -140,11 +165,11 @@ export default function Team() {
         {/* Invite Modal */}
         {showInvite && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#020617]/80 backdrop-blur-md">
-            <div className="w-full max-w-lg rounded-[2.5rem] border border-white/10 bg-[#0f172a] p-1 shadow-3xl overflow-hidden relative animate-in zoom-in-95 duration-300">
+            <div className="w-full max-w-lg rounded-[2.5rem] border border-white/10 bg-[#0f172a] p-1 shadow-3xl overflow-hidden relative">
               {isSuccess ? (
-                <div className="p-12 text-center space-y-6 animate-in fade-in">
+                <div className="p-12 text-center space-y-6">
                   <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto text-emerald-500 border border-emerald-500/20">
-                    <FiCheckCircle size={40} className="animate-bounce" />
+                    <FiCheckCircle size={40} />
                   </div>
 
                   <h2 className="text-2xl font-bold text-white">
@@ -171,77 +196,38 @@ export default function Team() {
                   </div>
 
                   <form onSubmit={handleInvite} className="space-y-5">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                        Agent Name
-                      </label>
+                    <InputField
+                      label="Agent Name"
+                      icon={<FiUser />}
+                      type="text"
+                      value={formData.name}
+                      onChange={(v) =>
+                        setFormData({ ...formData, name: v })
+                      }
+                      placeholder="Ganesh Rajput"
+                    />
 
-                      <div className="relative">
-                        <FiUser className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
+                    <InputField
+                      label="Email Address"
+                      icon={<FiMail />}
+                      type="email"
+                      value={formData.email}
+                      onChange={(v) =>
+                        setFormData({ ...formData, email: v })
+                      }
+                      placeholder="agent@tenantdesk.ai"
+                    />
 
-                        <input
-                          required
-                          type="text"
-                          value={formData.name}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              name: e.target.value,
-                            })
-                          }
-                          placeholder="Ganesh Rajput"
-                          className="w-full rounded-2xl border border-slate-800 bg-[#020617] py-4 pl-12 pr-4 text-sm outline-none focus:border-indigo-500/50"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                        Email Address
-                      </label>
-
-                      <div className="relative">
-                        <FiMail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
-
-                        <input
-                          required
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              email: e.target.value,
-                            })
-                          }
-                          placeholder="agent@tenantdesk.ai"
-                          className="w-full rounded-2xl border border-slate-800 bg-[#020617] py-4 pl-12 pr-4 text-sm outline-none focus:border-indigo-500/50"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
-                        Initial Password
-                      </label>
-
-                      <div className="relative">
-                        <FiLock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" />
-
-                        <input
-                          required
-                          type="password"
-                          value={formData.password}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              password: e.target.value,
-                            })
-                          }
-                          placeholder="••••••••"
-                          className="w-full rounded-2xl border border-slate-800 bg-[#020617] py-4 pl-12 pr-4 text-sm outline-none focus:border-indigo-500/50"
-                        />
-                      </div>
-                    </div>
+                    <InputField
+                      label="Initial Password"
+                      icon={<FiLock />}
+                      type="password"
+                      value={formData.password}
+                      onChange={(v) =>
+                        setFormData({ ...formData, password: v })
+                      }
+                      placeholder="••••••••"
+                    />
 
                     <div className="flex items-center gap-3 p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10">
                       <FiShield className="text-indigo-400" />
@@ -256,7 +242,7 @@ export default function Team() {
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="w-full bg-indigo-600 py-4 rounded-2xl font-bold text-white hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20 disabled:opacity-50"
+                      className="w-full bg-indigo-600 py-4 rounded-2xl font-bold text-white hover:bg-indigo-500 transition-all disabled:opacity-50"
                     >
                       {submitting ? "Inviting..." : "Invite Agent"}
                     </button>
@@ -267,26 +253,79 @@ export default function Team() {
           </div>
         )}
 
-        {/* Placeholder */}
-        <div className="rounded-[3rem] border border-slate-800 bg-[#0f172a] p-2 relative overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-
-          <div className="rounded-[2.8rem] border border-dashed border-slate-800 bg-[#020617]/50 p-24 text-center space-y-6 relative z-10">
-            <div className="w-20 h-20 bg-[#0f172a] rounded-3xl mx-auto flex items-center justify-center text-slate-800 border border-slate-800 shadow-inner">
-              <IoPeopleOutline size={40} />
+        {/* Agent Directory */}
+        <div className="rounded-[3rem] border border-slate-800 bg-[#0f172a] p-6">
+          {loadingAgents ? (
+            <div className="text-center py-16 text-slate-500">
+              Loading team members...
             </div>
-
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-slate-400">
-                Team Directory Coming Next
-              </h3>
-
-              <p className="max-w-md mx-auto text-sm text-slate-600 leading-relaxed italic">
-                Invited agents will appear here once team listing is connected.
-              </p>
+          ) : agents.length === 0 ? (
+            <div className="text-center py-16 text-slate-500">
+              No agents invited yet.
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {agents.map((agent) => (
+                <div
+                  key={agent._id}
+                  className="rounded-2xl border border-slate-800 bg-[#020617] px-6 py-5 flex items-center justify-between hover:border-indigo-500/30 transition"
+                >
+                  <div>
+                    <h3 className="text-white font-bold text-lg">
+                      {agent.username}
+                    </h3>
+                    <p className="text-slate-400 text-sm">
+                      {agent.email}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-xs text-indigo-400 font-bold">
+                      {agent.role}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Joined{" "}
+                      {new Date(agent.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* Reusable Input Field */
+function InputField({
+  label,
+  icon,
+  type,
+  value,
+  onChange,
+  placeholder,
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+        {label}
+      </label>
+
+      <div className="relative">
+        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600">
+          {icon}
+        </div>
+
+        <input
+          required
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full rounded-2xl border border-slate-800 bg-[#020617] py-4 pl-12 pr-4 text-sm outline-none focus:border-indigo-500/50"
+        />
       </div>
     </div>
   );

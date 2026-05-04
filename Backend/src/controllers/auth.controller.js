@@ -317,9 +317,38 @@ export const listAgents = async (req, res) => {
   }
 };
 
-export default {
-  register,
-  login,
-  verifyEmail,
-  getMe,
+
+export const updateProfile = async (req, res) => {
+  try {
+    const user = await userModel.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    user.username = req.body.username || user.username;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      user,
+    });
+
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update profile",
+    });
+  }
 };
+
+
+
+
+
