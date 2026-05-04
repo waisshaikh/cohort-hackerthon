@@ -230,10 +230,17 @@ npm run dev
 
 ---
 
-## 👨‍💻 Developed By
+## Developed By
 
-**Wais Shaikh**
-Full Stack Developer
+* **Wais Shaikh** – Full Stack Developer
+  GitHub: https://github.com/waisshaikh
+
+* **Ganesh** – Developer
+  GitHub: https://github.com/CodeWithGanesh1
+
+* **Roshan Nawkar** – Developer
+  GitHub: https://github.com/roshannawkar07
+
 
 ---
 
